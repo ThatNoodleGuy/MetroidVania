@@ -63,6 +63,7 @@ public class EnemyCore : MonoBehaviour
         if (!isRecoiling)
         {
             rb.AddForce(-hitForce * reciolFactor * hitDirection);
+            isRecoiling = true;
         }
     }
 

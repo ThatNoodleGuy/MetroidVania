@@ -361,6 +361,7 @@ public class PlayerController : MonoBehaviour
     private void Hit(Transform attackTransform, Vector3 attackArea, ref bool recoilDir, float recoilStrength)
     {
         Collider2D[] objectsToHit = Physics2D.OverlapBoxAll(attackTransform.position, attackArea, 0, attackableLayer);
+        List<EnemyCore> enemiesHit = new List<EnemyCore>();
 
         if (objectsToHit.Length > 0)
         {
@@ -372,7 +373,11 @@ public class PlayerController : MonoBehaviour
             if (objectsToHit[i].GetComponent<EnemyCore>() != null)
             {
                 EnemyCore enemy = objectsToHit[i].GetComponent<EnemyCore>();
-                enemy.EnemyHit(damage, (transform.position - objectsToHit[i].transform.position).normalized, recoilStrength);
+                if (enemy && !enemiesHit.Contains(enemy))
+                {
+                    enemy.EnemyHit(damage, (transform.position - objectsToHit[i].transform.position).normalized, recoilStrength);
+                    enemiesHit.Add(enemy);
+                }
             }
         }
     }
