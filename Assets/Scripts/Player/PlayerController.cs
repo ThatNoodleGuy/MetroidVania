@@ -19,6 +19,18 @@ public class PlayerController : MonoBehaviour
     private const string STATE_JUMP_ATTACK = "Player_Jump_Attack";
     private const string STATE_HURT = "Player_Hurt";
 
+    [Header("General Settings")]
+    [SerializeField] private Transform visualRoot;
+    private float visualBaseXScale;
+    [SerializeField] private PlayerControls _playerControls;
+    [SerializeField] private PlayerStateList _playerStateList;
+    [SerializeField] private Rigidbody2D _rigidbody2D;
+    [SerializeField] private Animator _animator;
+    private float xAxis, yAxis;
+    private float _gravity;
+    private string _currentState;
+    [Space(5)]
+
     [Header("Horizontal Movement Settings")]
     [SerializeField] private float walkSpeed = 1f;
     [Space(5)]
@@ -44,7 +56,11 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float dashSpeed;
     [SerializeField] private float dashTime;
     [SerializeField] private float dashCooldown;
+    // [SerializeField]private Transform dashEffectOriginPoint;
     [SerializeField] private GameObject dashEffectVFXPrefab;
+    [SerializeField] private Transform dashEffectOrigin;   // empty child under VisualRoot at the feet
+    [SerializeField] private bool parentDashEffectToVisual = false; // true = follow player
+    [SerializeField] private bool useVisualRotation = false;        // tr
     private bool canDash = true;
     private bool dashed;
     [Space(5)]
@@ -79,16 +95,12 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float invincibilityDuration = 1f;
     [Space(5)]
 
-    private PlayerControls _playerControls;
-    private PlayerStateList _playerStateList;
-    private Rigidbody2D _rigidbody2D;
-    private Animator _animator;
-    private float xAxis, yAxis;
-    private float playerSpriteXScale;
-    private float _gravity;
-    private string _currentState;
+    //Buttons
+    private Vector2 MoveValue;
+    private bool JumpValue;
+    private bool DashValue;
+    private bool AttackValue;
 
-    public Vector2 MoveValue => _playerControls.Player.Move.ReadValue<Vector2>();
 
     private void Awake()
     {
@@ -107,27 +119,54 @@ public class PlayerController : MonoBehaviour
 
     private void Start()
     {
-        _rigidbody2D = GetComponent<Rigidbody2D>();
-        _animator = GetComponent<Animator>();
+        _rigidbody2D = GetComponent<Rigidbody2D>();                 // root has the RB2D
+        _animator = visualRoot.GetComponent<Animator>();        // animator is on VisualRoot
         _playerStateList = GetComponent<PlayerStateList>();
+
+        visualBaseXScale = visualRoot ? visualRoot.localScale.x : 1f;
+
+        _playerStateList.IsLookingRight = true; // start facing right
+        _playerStateList.IsJumping = false;
+        _playerStateList.IsDashing = false;
+        _playerStateList.IsAttacking = false;
+        _playerStateList.IsRecoilingXAxis = false;
+        _playerStateList.IsRecoilingYAxis = false;
+        _playerStateList.IsInvincible = false;
+        ApplyFacing();
 
         _playerControls.Player.Move.performed += _ => HandleMovement();
         _playerControls.Player.Jump.performed += _ => HandleJumping();
+        _playerControls.Player.Dash.performed += _ => HandleDashing();
+        _playerControls.Player.Attack.performed += _ => HandleAttacking();
 
         health = maxHealth;
-
-        playerSpriteXScale = transform.localScale.x;
         _gravity = _rigidbody2D.gravityScale;
     }
 
     private void OnEnable()
     {
         _playerControls.Player.Enable();
+
+        _playerControls.Player.Move.performed += _ => HandleMovement();
+        _playerControls.Player.Jump.performed += _ => HandleJumping();
+        _playerControls.Player.Dash.performed += _ => HandleDashing();
+        _playerControls.Player.Attack.performed += _ => HandleAttacking();
+
+        _playerControls.Player.Move.Enable();
+        _playerControls.Player.Jump.Enable();
+        _playerControls.Player.Dash.Enable();
+        _playerControls.Player.Attack.Enable();
     }
 
     private void OnDisable()
     {
         _playerControls.Player.Disable();
+
+        _playerControls.Player.Move.Disable();
+        _playerControls.Player.Jump.Disable();
+        _playerControls.Player.Dash.Disable();
+        _playerControls.Player.Attack.Disable();
+
     }
 
     private void Update()
@@ -166,6 +205,11 @@ public class PlayerController : MonoBehaviour
 
     private void UpdateAxisInput()
     {
+        MoveValue = _playerControls.Player.Move.ReadValue<Vector2>();
+        JumpValue = _playerControls.Player.Jump.WasPressedThisFrame();
+        DashValue = _playerControls.Player.Dash.WasPressedThisFrame();
+        AttackValue = _playerControls.Player.Attack.WasPressedThisFrame();
+
         xAxis = MoveValue.x;
         yAxis = MoveValue.y;
     }
@@ -197,7 +241,7 @@ public class PlayerController : MonoBehaviour
     public void HandleJumping()
     {
         // Don't cancel jump if attacking in the air
-        if (_playerControls.Player.Jump.WasReleasedThisFrame() && _rigidbody2D.linearVelocity.y > 0 && !_playerStateList.IsAttacking)
+        if (JumpValue && _rigidbody2D.linearVelocity.y > 0 && !_playerStateList.IsAttacking)
         {
             _rigidbody2D.linearVelocity = new Vector2(_rigidbody2D.linearVelocity.x, 0);
             _playerStateList.IsJumping = false;
@@ -210,7 +254,7 @@ public class PlayerController : MonoBehaviour
                 _rigidbody2D.linearVelocity = new Vector3(_rigidbody2D.linearVelocity.x, jumpForce, 0);
                 _playerStateList.IsJumping = true;
             }
-            else if (!Grounded() && airJumpCounter < maxAirJumps && _playerControls.Player.Jump.WasPressedThisFrame())
+            else if (!Grounded() && airJumpCounter < maxAirJumps && JumpValue)
             {
                 _playerStateList.IsJumping = true;
                 airJumpCounter++;
@@ -233,7 +277,7 @@ public class PlayerController : MonoBehaviour
             coyoteTimeCounter -= Time.deltaTime;
         }
 
-        if (_playerControls.Player.Jump.WasPressedThisFrame())
+        if (JumpValue)
         {
             jumpBufferCounter = jumpBufferFrames;
         }
@@ -245,18 +289,25 @@ public class PlayerController : MonoBehaviour
 
     private void HandlePlayerSpriteFlip()
     {
-        if (xAxis < 0)
+        if (Mathf.Abs(xAxis) < 0.001f) return; // no change
+
+        bool wantRight = xAxis > 0f;
+        if (wantRight != _playerStateList.IsLookingRight)
         {
-            transform.localScale = new Vector2(-playerSpriteXScale, transform.localScale.y);
-            _playerStateList.IsLookingRight = false;
-            // transform.eulerAngles = new Vector3(0, 180, 0);
+            _playerStateList.IsLookingRight = wantRight;
+            ApplyFacing();
         }
-        else if (xAxis > 0)
-        {
-            transform.localScale = new Vector2(playerSpriteXScale, transform.localScale.y);
-            _playerStateList.IsLookingRight = true;
-            // transform.eulerAngles = new Vector3(0, 0, 0);
-        }
+    }
+
+    private void ApplyFacing()
+    {
+        if (visualRoot == null) return;
+
+        // HK art: default (+X) looks LEFT. So to face RIGHT we need -X.
+        float sign = _playerStateList.IsLookingRight ? -1f : 1f;
+        var s = visualRoot.localScale;
+        s.x = Mathf.Abs(visualBaseXScale) * sign;
+        visualRoot.localScale = s;
     }
 
     private void UpdateAnimationState()
@@ -300,7 +351,7 @@ public class PlayerController : MonoBehaviour
 
     private void HandleDashing()
     {
-        if (canDash && _playerControls.Player.Dash.WasPressedThisFrame() && !dashed)
+        if (canDash && DashValue && !dashed)
         {
             StartCoroutine(DashRoutine());
             dashed = true;
@@ -317,11 +368,16 @@ public class PlayerController : MonoBehaviour
         canDash = false;
         _playerStateList.IsDashing = true;
         _rigidbody2D.gravityScale = 0;
-        _rigidbody2D.linearVelocity = new Vector2(transform.localScale.x * dashSpeed, 0);
+
+        float dir = _playerStateList.IsLookingRight ? 1f : -1f;
+        _rigidbody2D.linearVelocity = new Vector2(dir * dashSpeed, 0);
+
         if (Grounded())
         {
-            GameObject dashEffect = Instantiate(dashEffectVFXPrefab, transform);
+            // Instantiate(dashEffectVFXPrefab, visualRoot != null ? visualRoot : transform);
+            SpawnDashEffect();
         }
+
         yield return new WaitForSeconds(dashTime);
         _rigidbody2D.gravityScale = _gravity;
         _playerStateList.IsDashing = false;
@@ -329,9 +385,27 @@ public class PlayerController : MonoBehaviour
         canDash = true;
     }
 
+    private void SpawnDashEffect()
+    {
+        if (!dashEffectVFXPrefab || !dashEffectOrigin) return;
+
+        // Spawn at the origin point
+        var rot = useVisualRotation && visualRoot ? visualRoot.rotation : Quaternion.identity;
+        var fx = Instantiate(dashEffectVFXPrefab, dashEffectOrigin.position, rot);
+
+        if (parentDashEffectToVisual && visualRoot)
+        { fx.transform.SetParent(visualRoot, worldPositionStays: true); }
+
+        float sign = _playerStateList.IsLookingRight ? 1f : -1f;
+
+        var s = fx.transform.localScale;
+        s.x = Mathf.Abs(s.x) * sign;
+        fx.transform.localScale = s;
+    }
+
     private void HandleAttacking()
     {
-        if (_playerControls.Player.Attack.WasPressedThisFrame() && timeSinceAttack >= timeBetweenAttacks)
+        if (AttackValue && timeSinceAttack >= timeBetweenAttacks)
         {
             timeSinceAttack = 0;
             _playerStateList.IsAttacking = true;
@@ -348,12 +422,12 @@ public class PlayerController : MonoBehaviour
             else if (yAxis > 0)
             {
                 Hit(UpAttackTransform, UpAttackArea, ref _playerStateList.IsRecoilingYAxis, recoilYSpeed);
-                SlashEffectAtAngle(slashEffectWideVFXPrefab, 80 , UpAttackTransform);
+                SlashEffectAtAngle(slashEffectWideVFXPrefab, 80, UpAttackTransform);
             }
             else if (yAxis < 0 && !Grounded())
             {
                 Hit(DownAttackTransform, DownAttackArea, ref _playerStateList.IsRecoilingYAxis, recoilYSpeed);
-                SlashEffectAtAngle(slashEffectWideVFXPrefab, -90 , DownAttackTransform);
+                SlashEffectAtAngle(slashEffectWideVFXPrefab, -90, DownAttackTransform);
             }
         }
     }
@@ -384,9 +458,13 @@ public class PlayerController : MonoBehaviour
 
     private void SlashEffectAtAngle(GameObject slashEffect, int effectAngle, Transform attackTransform)
     {
-        slashEffect = Instantiate(slashEffect, attackTransform);
-        slashEffect.transform.eulerAngles = new Vector3(0, 0, effectAngle);
-        slashEffect.transform.localScale = new Vector3(transform.localScale.x, transform.localScale.y, 1);
+        var fx = Instantiate(slashEffect, attackTransform);
+        fx.transform.eulerAngles = new Vector3(0, 0, effectAngle);
+
+        float dir = _playerStateList.IsLookingRight ? 1f : -1f;
+        var s = fx.transform.localScale;
+        s.x = Mathf.Abs(s.x) * dir;
+        fx.transform.localScale = s;
     }
 
     private void Recoil()
