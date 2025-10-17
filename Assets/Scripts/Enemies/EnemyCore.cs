@@ -8,8 +8,8 @@ public class EnemyCore : MonoBehaviour
 {
     [SerializeField] protected float health;
     protected float maxHealth;
-    [SerializeField] protected float recuilLength;
-    [SerializeField] protected float reciolFactor;
+    [SerializeField] protected float recoilLength;
+    [SerializeField] protected float recoilFactor;
     protected float recoilTimer;
     [SerializeField] protected bool isRecoiling = false;
 
@@ -43,7 +43,7 @@ public class EnemyCore : MonoBehaviour
 
         if (isRecoiling)
         {
-            if (recoilTimer < recuilLength)
+            if (recoilTimer < recoilLength)
             {
                 recoilTimer += Time.deltaTime;
             }
@@ -62,16 +62,17 @@ public class EnemyCore : MonoBehaviour
 
         if (!isRecoiling)
         {
-            rb.AddForce(-hitForce * reciolFactor * hitDirection);
+            rb.AddForce(-hitForce * recoilFactor * hitDirection);
             isRecoiling = true;
         }
     }
 
-    protected void OnTriggerStay2D(Collider2D other)
+    protected void OnCollisionStay2D(Collision2D other) 
     {
-        if (other.GetComponent<PlayerController>() && !PlayerController.Instance.GetComponent<PlayerStateList>().IsInvincible)
+        if (other.gameObject.GetComponent<PlayerController>() && !PlayerController.Instance.GetComponent<PlayerStateList>().IsInvincible)
         {
             Attack();
+            PlayerController.Instance.HitStopTime(0, 5, 0.5f);  // time scale = 0, restore speed = 5, delay = 0.5
         }
     }
 
@@ -81,7 +82,7 @@ public class EnemyCore : MonoBehaviour
     }
 
     public float Health { get => health; set => health = value; }
-    public float RecuilLength { get => recuilLength; set => recuilLength = value; }
+    public float RecoilLength { get => recoilLength; set => recoilLength = value; }
     public PlayerController Player { get => player; set => player = value; }
 
 

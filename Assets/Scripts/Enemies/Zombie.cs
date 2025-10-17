@@ -24,10 +24,6 @@ public class Zombie : EnemyCore
 
         if (player == null)
         {
-            player = GameObject.FindAnyObjectByType<PlayerController>();
-        }
-        else
-        {
             player = PlayerController.Instance;
         }
 
