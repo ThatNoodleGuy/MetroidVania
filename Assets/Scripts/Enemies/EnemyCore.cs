@@ -19,18 +19,13 @@ public class EnemyCore : MonoBehaviour
     [SerializeField] protected float speed;
 
     [SerializeField] protected float damage;
-
-    protected virtual void Awake()
+    
+    protected virtual void Start()
     {
         rb = GetComponent<Rigidbody2D>();
         player = PlayerController.Instance;
 
         maxHealth = health;
-    }
-    
-    protected virtual void Start()
-    {
-        
     }
 
     protected virtual void Update()

@@ -144,11 +144,13 @@ public class PlayerController : MonoBehaviour
         }
         else if (Instance != this && Instance != null)
         {
-            Destroy(this);
+            Destroy(gameObject);
         }
 
         _playerControls = new PlayerControls();
         _playerControls.Player.Enable();
+
+        DontDestroyOnLoad(gameObject);
     }
 
     private void Start()
@@ -401,7 +403,8 @@ public class PlayerController : MonoBehaviour
         canDash = false;
         _playerStateList.IsDashing = true;
         _rigidbody2D.gravityScale = 0;
-        _rigidbody2D.linearVelocity = new Vector2(transform.localScale.x * dashSpeed, 0);
+        int direction = _playerStateList.IsLookingRight ? 1 : -1;
+        _rigidbody2D.linearVelocity = new Vector2(direction * dashSpeed, 0);
         if (Grounded())
         {
             GameObject dashEffect = Instantiate(dashEffectVFXPrefab, transform);

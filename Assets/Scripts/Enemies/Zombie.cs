@@ -6,15 +6,10 @@ using UnityEngine;
 
 public class Zombie : EnemyCore
 {
-    protected override void Awake()
-    {
-        base.Awake();
-
-
-    }
-
     protected override void Start()
     {
+        base.Start();
+
         rb.gravityScale = 12f;
     }
 

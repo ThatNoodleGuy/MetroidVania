@@ -357,7 +357,7 @@ MonoBehaviour:
   DownAttackArea: {x: 3.5, y: 4.5}
   attackableLayer:
     serializedVersion: 2
-    m_Bits: 2048
+    m_Bits: 256
   timeBetweenAttacks: 0.5
   damage: 2
   slashEffectWideVFXPrefab: {fileID: 5738951666337253194, guid: 98a21e3aededd18408f0cb8a07fee6c9, type: 3}
