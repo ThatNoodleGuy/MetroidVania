@@ -17,7 +17,7 @@ public class Fireball : MonoBehaviour
 
     private void FixedUpdate() 
     {
-        transform.position += speed * transform.right; 
+        transform.position += speed * transform.right * Time.fixedDeltaTime; 
     }
 
     private void OnTriggerEnter2D(Collider2D other)

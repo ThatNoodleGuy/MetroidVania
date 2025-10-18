@@ -15,7 +15,7 @@
                     "initialStateCheck": true
                 },
                 {
-                    "name": "Heal",
+                    "name": "CastAndHeal",
                     "type": "Button",
                     "id": "27c5f898-bc57-4ee1-8800-db469aca5fe3",
                     "expectedControlType": "",
@@ -343,7 +343,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "Gamepad",
-                    "action": "Heal",
+                    "action": "CastAndHeal",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -354,7 +354,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "Keyboard&Mouse",
-                    "action": "Heal",
+                    "action": "CastAndHeal",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }
