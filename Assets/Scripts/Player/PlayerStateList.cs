@@ -20,4 +20,5 @@ public class PlayerStateList : MonoBehaviour
     public bool IsRespawning;
     public bool IsRespawned;
     public bool IsCasting;
+    public bool IsInCutscene = false;
 }

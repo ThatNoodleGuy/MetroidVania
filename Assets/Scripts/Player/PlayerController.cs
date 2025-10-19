@@ -189,6 +189,8 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
+        if (_playerStateList.IsInCutscene) return;
+
         UpdateAxisInput();
         UpdateJumpVariables();
 
@@ -227,6 +229,8 @@ public class PlayerController : MonoBehaviour
 
     private void FixedUpdate()
     {
+        if (_playerStateList.IsInCutscene) return;
+
         if (_playerStateList.IsDashing || _playerStateList.IsHealing) return;
 
         HandleRecoiling();
@@ -363,15 +367,6 @@ public class PlayerController : MonoBehaviour
 
     private void HandlePlayerSpriteFlip()
     {
-        // if (xAxis < 0)
-        // {
-        //     transform.eulerAngles = new Vector3(0, 180, 0);
-        // }
-        // else if (xAxis > 0)
-        // {
-        //     transform.eulerAngles = new Vector3(0, 0, 0);
-        // }
-
         if (xAxis < 0)
         {
             transform.localScale = new Vector2(-1, transform.localScale.y);
@@ -698,11 +693,11 @@ public class PlayerController : MonoBehaviour
 
     public float Mana
     {
-        get 
-        { 
-            return mana; 
+        get
+        {
+            return mana;
         }
-        set 
+        set
         {
             if (mana != value)
             {
@@ -710,6 +705,25 @@ public class PlayerController : MonoBehaviour
                 manaStorage.fillAmount = Mana;
             }
         }
+    }
+    
+    public IEnumerator WalkIntoNewSceneRoutine(Vector2 exitDir, float delay)
+    {
+        if (exitDir.y > 0)
+        {
+            _rigidbody2D.linearVelocity = new Vector2(0, walkSpeed);
+        }
+
+        if (exitDir.x != 0)
+        {
+            xAxis = exitDir.x > 0 ? 1 : -1;
+
+            HandleMovement();
+        }
+        HandlePlayerSpriteFlip();
+
+        yield return new WaitForSecondsRealtime(delay);
+        _playerStateList.IsInCutscene = false;
     }
 
     private void UpdateAnimationState()
