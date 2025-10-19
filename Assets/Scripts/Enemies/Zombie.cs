@@ -6,15 +6,10 @@ using UnityEngine;
 
 public class Zombie : EnemyCore
 {
-    protected override void Awake()
-    {
-        base.Awake();
-
-
-    }
-
     protected override void Start()
     {
+        base.Start();
+
         rb.gravityScale = 12f;
     }
 
@@ -23,10 +18,6 @@ public class Zombie : EnemyCore
         base.Update();
 
         if (player == null)
-        {
-            player = GameObject.FindAnyObjectByType<PlayerController>();
-        }
-        else
         {
             player = PlayerController.Instance;
         }

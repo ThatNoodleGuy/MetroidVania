@@ -3,8 +3,8 @@ using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 using UnityEngine.InputSystem;
-using UnityEngine.XR;
 
 public class PlayerController : MonoBehaviour
 {
@@ -18,6 +18,23 @@ public class PlayerController : MonoBehaviour
     private const string STATE_ATTACK = "Player_Attack";
     private const string STATE_JUMP_ATTACK = "Player_Jump_Attack";
     private const string STATE_HURT = "Player_Hurt";
+    private const string STATE_HEALING = "Player_Heal";
+    private const string STATE_DEATH = "Player_Death";
+    private const string STATE_CASTING = "Player_Cast";
+
+    [Header("General Settings")]
+    [SerializeField] private Transform visualRoot;
+    private float visualBaseXScale;
+    [SerializeField] private PlayerControls _playerControls;
+    [SerializeField] private PlayerStateList _playerStateList;
+    [SerializeField] private Rigidbody2D _rigidbody2D;
+    [SerializeField] private Animator _animator;
+    private SpriteRenderer _spriteRenderer;
+    private float xAxis, yAxis;
+    private bool canFlash = true;
+    private float _gravity;
+    private string _currentState;
+    [Space(5)]
 
     [Header("Horizontal Movement Settings")]
     [SerializeField] private float walkSpeed = 1f;
@@ -44,7 +61,9 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float dashSpeed;
     [SerializeField] private float dashTime;
     [SerializeField] private float dashCooldown;
+    // [SerializeField]private Transform dashEffectOriginPoint;
     [SerializeField] private GameObject dashEffectVFXPrefab;
+    [SerializeField] private Transform dashEffectOrigin;   // empty child under VisualRoot at the feet
     private bool canDash = true;
     private bool dashed;
     [Space(5)]
@@ -63,6 +82,8 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float damage;
     [SerializeField] private GameObject slashEffectWideVFXPrefab;
     [SerializeField] private float hitForce;
+    private bool restoreTime;
+    private float restoreTimeSpeed;
     [Space(5)]
 
     [Header("Recoil Settings:")]
@@ -77,18 +98,43 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private int health;
     [SerializeField] private int maxHealth;
     [SerializeField] private float invincibilityDuration = 1f;
+    [SerializeField] private GameObject bloodSpurtVFXPrefab;
+    [SerializeField] private float hitFlashSpeed;
+    private bool hitStopActive;
+    public delegate void OnHealthChangedDelegate();
+    [HideInInspector] public OnHealthChangedDelegate OnHealthChangedCallback;
+    private float healTimer;
+    [SerializeField] private float timeToHeal;
     [Space(5)]
 
-    private PlayerControls _playerControls;
-    private PlayerStateList _playerStateList;
-    private Rigidbody2D _rigidbody2D;
-    private Animator _animator;
-    private float xAxis, yAxis;
-    private float playerSpriteXScale;
-    private float _gravity;
-    private string _currentState;
+    [Header("Mana Settings:")]
+    [SerializeField] private Image manaStorage;
+    [SerializeField] private float mana;
+    [SerializeField] private float manaDrainSpeed;
+    [SerializeField] private float manaGain;
+    [SerializeField] private float healBlendSpeed = 2f; // Speed to reach loop animation
+    private float healBlendValue = 0f; // Current position in blend tree
+    [Space(5)]
 
-    public Vector2 MoveValue => _playerControls.Player.Move.ReadValue<Vector2>();
+    [Header("Spell Casting Settings:")]
+    [SerializeField] private float manaSpellCost = 0.3f;
+    [SerializeField] private float timeBetweenCasts = 0.3f;
+    [SerializeField] private float spellDamage; // upspell and downspell damage
+    [SerializeField] private float downSpellForce; // Dive down force
+    [SerializeField] private GameObject sideSpellFireball;
+    [SerializeField] private GameObject upSpellExplosion;
+    [SerializeField] private GameObject downSpellFireball;
+    [SerializeField] private AnimationClip spellCastAnimation;
+    private float timeSinceCast;
+    private float castOrHealTimer;
+    [Space(5)]
+
+    //Buttons
+    private Vector2 MoveValue;
+    private bool JumpValue;
+    private bool JumpValueRelease;
+    private bool DashValue;
+    private bool AttackValue;
 
     private void Awake()
     {
@@ -98,11 +144,13 @@ public class PlayerController : MonoBehaviour
         }
         else if (Instance != this && Instance != null)
         {
-            Destroy(this);
+            Destroy(gameObject);
         }
 
         _playerControls = new PlayerControls();
         _playerControls.Player.Enable();
+
+        DontDestroyOnLoad(gameObject);
     }
 
     private void Start()
@@ -110,24 +158,33 @@ public class PlayerController : MonoBehaviour
         _rigidbody2D = GetComponent<Rigidbody2D>();
         _animator = GetComponent<Animator>();
         _playerStateList = GetComponent<PlayerStateList>();
+        _spriteRenderer = GetComponent<SpriteRenderer>();
 
-        _playerControls.Player.Move.performed += _ => HandleMovement();
-        _playerControls.Player.Jump.performed += _ => HandleJumping();
-
-        health = maxHealth;
-
-        playerSpriteXScale = transform.localScale.x;
+        Health = maxHealth;
         _gravity = _rigidbody2D.gravityScale;
+
+        Mana = mana;
+        manaStorage.fillAmount = Mana;
     }
 
     private void OnEnable()
     {
         _playerControls.Player.Enable();
+        _playerControls.Player.Move.Enable();
+        _playerControls.Player.Jump.Enable();
+        _playerControls.Player.Dash.Enable();
+        _playerControls.Player.Attack.Enable();
+
     }
 
     private void OnDisable()
     {
         _playerControls.Player.Disable();
+        _playerControls.Player.Move.Disable();
+        _playerControls.Player.Jump.Disable();
+        _playerControls.Player.Dash.Disable();
+        _playerControls.Player.Attack.Disable();
+
     }
 
     private void Update()
@@ -137,8 +194,7 @@ public class PlayerController : MonoBehaviour
 
         timeSinceAttack += Time.deltaTime;
 
-        // Don't allow other actions during dash or attack
-        if (_playerStateList.IsDashing)
+        if (_playerStateList.IsDashing || _playerStateList.IsHealing)
         {
             UpdateAnimationState();
             return;
@@ -156,18 +212,53 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        HandlePlayerSpriteFlip();
+        RestoreTimeScale();
+        FlashWhileInvincible();
         HandleMovement();
+        HandleHealing();
+        HandleCastingSpell();
+
+        HandlePlayerSpriteFlip();
         HandleJumping();
         HandleDashing();
         HandleAttacking();
         UpdateAnimationState();
     }
 
+    private void FixedUpdate()
+    {
+        if (_playerStateList.IsDashing || _playerStateList.IsHealing) return;
+
+        HandleRecoiling();
+    }
+
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (collision.GetComponent<EnemyCore>() != null && _playerStateList.IsCasting)
+        {
+            collision.GetComponent<EnemyCore>().EnemyHit(spellDamage, (collision.transform.position - transform.position).normalized, -recoilYSpeed);
+        }
+    }
+
     private void UpdateAxisInput()
     {
+        MoveValue = _playerControls.Player.Move.ReadValue<Vector2>();
+        JumpValue = _playerControls.Player.Jump.WasPressedThisFrame();
+        JumpValueRelease = _playerControls.Player.Jump.WasReleasedThisFrame();
+        DashValue = _playerControls.Player.Dash.WasPressedThisFrame();
+        AttackValue = _playerControls.Player.Attack.WasPressedThisFrame();
+
         xAxis = MoveValue.x;
         yAxis = MoveValue.y;
+
+        if (_playerControls.Player.CastAndHeal.IsPressed())
+        {
+            castOrHealTimer += Time.deltaTime;
+        }
+        else
+        {
+            castOrHealTimer = 0f;
+        }
     }
 
     public Vector2 GetPlayerMovementDirection()
@@ -177,7 +268,36 @@ public class PlayerController : MonoBehaviour
 
     public void HandleMovement()
     {
+        if (_playerStateList.IsHealing)
+        {
+            _rigidbody2D.linearVelocity = Vector2.zero;
+        }
+
         _rigidbody2D.linearVelocity = new Vector2(xAxis * walkSpeed, _rigidbody2D.linearVelocity.y);
+    }
+
+    private void HandleCastingSpell()
+    {
+        if ((_playerControls.Player.CastAndHeal.WasReleasedThisFrame()) && (castOrHealTimer <= 0.05f) && (timeSinceCast >= timeBetweenCasts) && (Mana >= manaSpellCost))
+        {
+            _playerStateList.IsCasting = true;
+            timeSinceCast = 0f;
+            // No coroutine needed!
+        }
+        else
+        {
+            timeSinceCast += Time.deltaTime;
+        }
+
+        if (Grounded())
+        {
+            downSpellFireball.SetActive(false);
+        }
+
+        if (downSpellFireball.activeInHierarchy)
+        {
+            _rigidbody2D.linearVelocity = downSpellForce * Vector2.down;
+        }
     }
 
     public bool Grounded()
@@ -196,26 +316,24 @@ public class PlayerController : MonoBehaviour
 
     public void HandleJumping()
     {
-        // Don't cancel jump if attacking in the air
-        if (_playerControls.Player.Jump.WasReleasedThisFrame() && _rigidbody2D.linearVelocity.y > 0 && !_playerStateList.IsAttacking)
+        if (jumpBufferCounter > 0 && coyoteTimeCounter > 0 && !_playerStateList.IsJumping)
         {
-            _rigidbody2D.linearVelocity = new Vector2(_rigidbody2D.linearVelocity.x, 0);
-            _playerStateList.IsJumping = false;
+            _rigidbody2D.linearVelocity = new Vector3(_rigidbody2D.linearVelocity.x, jumpForce, 0);
+            _playerStateList.IsJumping = true;
+        }
+        
+        if (!Grounded() && airJumpCounter < maxAirJumps && JumpValue)
+        {
+            _playerStateList.IsJumping = true;
+            airJumpCounter++;
+            _rigidbody2D.linearVelocity = new Vector3(_rigidbody2D.linearVelocity.x, jumpForce, 0);
         }
 
-        if (!_playerStateList.IsJumping)
+        // if (JumpValue && _rigidbody2D.linearVelocity.y > 0 && !_playerStateList.IsAttacking)
+        if (JumpValueRelease && _rigidbody2D.linearVelocity.y > 3f)
         {
-            if (jumpBufferCounter > 0 && coyoteTimeCounter > 0)
-            {
-                _rigidbody2D.linearVelocity = new Vector3(_rigidbody2D.linearVelocity.x, jumpForce, 0);
-                _playerStateList.IsJumping = true;
-            }
-            else if (!Grounded() && airJumpCounter < maxAirJumps && _playerControls.Player.Jump.WasPressedThisFrame())
-            {
-                _playerStateList.IsJumping = true;
-                airJumpCounter++;
-                _rigidbody2D.linearVelocity = new Vector3(_rigidbody2D.linearVelocity.x, jumpForce, 0);
-            }
+            _playerStateList.IsJumping = false;
+            _rigidbody2D.linearVelocity = new Vector2(_rigidbody2D.linearVelocity.x, 0);
         }
     }
 
@@ -233,7 +351,7 @@ public class PlayerController : MonoBehaviour
             coyoteTimeCounter -= Time.deltaTime;
         }
 
-        if (_playerControls.Player.Jump.WasPressedThisFrame())
+        if (JumpValue)
         {
             jumpBufferCounter = jumpBufferFrames;
         }
@@ -245,56 +363,24 @@ public class PlayerController : MonoBehaviour
 
     private void HandlePlayerSpriteFlip()
     {
+        // if (xAxis < 0)
+        // {
+        //     transform.eulerAngles = new Vector3(0, 180, 0);
+        // }
+        // else if (xAxis > 0)
+        // {
+        //     transform.eulerAngles = new Vector3(0, 0, 0);
+        // }
+
         if (xAxis < 0)
         {
-            transform.localScale = new Vector2(-playerSpriteXScale, transform.localScale.y);
+            transform.localScale = new Vector2(-1, transform.localScale.y);
             _playerStateList.IsLookingRight = false;
-            // transform.eulerAngles = new Vector3(0, 180, 0);
         }
         else if (xAxis > 0)
         {
-            transform.localScale = new Vector2(playerSpriteXScale, transform.localScale.y);
+            transform.localScale = new Vector2(1, transform.localScale.y);
             _playerStateList.IsLookingRight = true;
-            // transform.eulerAngles = new Vector3(0, 0, 0);
-        }
-    }
-
-    private void UpdateAnimationState()
-    {
-        string newState;
-
-        // Determine which state to play based on game logic
-        if (_playerStateList.IsAttacking)
-        {
-            // Use the attack animation that was determined when the attack started
-            newState = _attackAnimationStarted;
-        }
-        else if (_playerStateList.IsDashing)
-        {
-            newState = STATE_DASH;
-        }
-        else if (!Grounded())
-        {
-            newState = STATE_JUMP;
-        }
-        else if (Mathf.Abs(_rigidbody2D.linearVelocity.x) > 0.01f)
-        {
-            newState = STATE_WALK;
-        }
-        else if (_playerStateList.IsInvincible)
-        {
-            newState = STATE_HURT;
-        }
-        else
-        {
-            newState = STATE_IDLE;
-        }
-
-        // Only change state if it's different (prevents restarting the same animation)
-        if (newState != _currentState)
-        {
-            _animator.Play(newState);
-            _currentState = newState;
         }
     }
 
@@ -317,7 +403,8 @@ public class PlayerController : MonoBehaviour
         canDash = false;
         _playerStateList.IsDashing = true;
         _rigidbody2D.gravityScale = 0;
-        _rigidbody2D.linearVelocity = new Vector2(transform.localScale.x * dashSpeed, 0);
+        int direction = _playerStateList.IsLookingRight ? 1 : -1;
+        _rigidbody2D.linearVelocity = new Vector2(direction * dashSpeed, 0);
         if (Grounded())
         {
             GameObject dashEffect = Instantiate(dashEffectVFXPrefab, transform);
@@ -331,7 +418,7 @@ public class PlayerController : MonoBehaviour
 
     private void HandleAttacking()
     {
-        if (_playerControls.Player.Attack.WasPressedThisFrame() && timeSinceAttack >= timeBetweenAttacks)
+        if (AttackValue && timeSinceAttack >= timeBetweenAttacks && !_playerStateList.IsInvincible)
         {
             timeSinceAttack = 0;
             _playerStateList.IsAttacking = true;
@@ -348,12 +435,12 @@ public class PlayerController : MonoBehaviour
             else if (yAxis > 0)
             {
                 Hit(UpAttackTransform, UpAttackArea, ref _playerStateList.IsRecoilingYAxis, recoilYSpeed);
-                SlashEffectAtAngle(slashEffectWideVFXPrefab, 80 , UpAttackTransform);
+                SlashEffectAtAngle(slashEffectWideVFXPrefab, 80, UpAttackTransform);
             }
             else if (yAxis < 0 && !Grounded())
             {
                 Hit(DownAttackTransform, DownAttackArea, ref _playerStateList.IsRecoilingYAxis, recoilYSpeed);
-                SlashEffectAtAngle(slashEffectWideVFXPrefab, -90 , DownAttackTransform);
+                SlashEffectAtAngle(slashEffectWideVFXPrefab, -90, DownAttackTransform);
             }
         }
     }
@@ -378,6 +465,11 @@ public class PlayerController : MonoBehaviour
                     enemy.EnemyHit(damage, (transform.position - objectsToHit[i].transform.position).normalized, recoilStrength);
                     enemiesHit.Add(enemy);
                 }
+
+                if (objectsToHit[i].GetComponent<EnemyCore>())
+                {
+                    Mana += manaGain;
+                }
             }
         }
     }
@@ -386,10 +478,10 @@ public class PlayerController : MonoBehaviour
     {
         slashEffect = Instantiate(slashEffect, attackTransform);
         slashEffect.transform.eulerAngles = new Vector3(0, 0, effectAngle);
-        slashEffect.transform.localScale = new Vector3(transform.localScale.x, transform.localScale.y, 1);
+        slashEffect.transform.localScale = new Vector2(transform.localScale.x, transform.localScale.y);
     }
 
-    private void Recoil()
+    private void HandleRecoiling()
     {
         if (_playerStateList.IsRecoilingXAxis)
         {
@@ -461,21 +553,248 @@ public class PlayerController : MonoBehaviour
 
     public void TakeDamage(float damage)
     {
-        health -= Mathf.RoundToInt(damage);
+        Health -= Mathf.RoundToInt(damage);
+        
+        // Cancel any ongoing attacks
+        _playerStateList.IsAttacking = false;
+        _attackAnimationStarted = null;
+        
         StartCoroutine(StopTakingDamageRoutine());
-    }
-
-    private void ClampHealth()
-    {
-        health = Mathf.Clamp(health, 0, maxHealth);
     }
 
     private IEnumerator StopTakingDamageRoutine()
     {
         _playerStateList.IsInvincible = true;
-        ClampHealth();
-        yield return new WaitForSeconds(invincibilityDuration);
+        var fx = Instantiate(bloodSpurtVFXPrefab, transform.position, Quaternion.identity);
+
+        // use realtime so invincibility always ends even if timeScale changes
+        yield return new WaitForSecondsRealtime(invincibilityDuration);
         _playerStateList.IsInvincible = false;
+    }
+
+    private void FlashWhileInvincible()
+    {
+        if (_playerStateList.IsInvincible)
+        {
+            if(Time.timeScale > 0.2 && canFlash)
+            {
+                StartCoroutine(FlashRoutine());
+            }
+        }
+        else
+        {
+            _spriteRenderer.enabled = true;
+        }
+    }
+
+    private IEnumerator FlashRoutine()
+    {
+        _spriteRenderer.enabled = !_spriteRenderer.enabled;
+        canFlash = false;
+        yield return new WaitForSeconds(0.1f);
+        canFlash = true;
+    }
+
+    private void RestoreTimeScale()
+    {
+        if (restoreTime)
+        {
+            if (Time.timeScale < 1)
+            {
+                Time.timeScale += Time.unscaledDeltaTime * restoreTimeSpeed;
+            }
+            else
+            {
+                Time.timeScale = 1;
+                restoreTime = false;
+                hitStopActive = false;
+            }
+        }
+    }
+
+    public void HitStopTime(float newTimeScale, int restoreSpeed, float delay)
+    {
+        if (hitStopActive) return;
+        hitStopActive = true;
+    
+        restoreTimeSpeed = restoreSpeed;
+        Time.timeScale = Mathf.Clamp(newTimeScale, 0f, 1f);
+
+        if (delay > 0f)
+        {
+            // don’t rely on scaled time when timeScale might be 0
+            StopCoroutine(nameof(StartTimeAgain));
+            StartCoroutine(StartTimeAgain(delay));
+        }
+        else
+        {
+            restoreTime = true;
+        }
+    }
+
+    private IEnumerator StartTimeAgain(float delay)
+    {
+        yield return new WaitForSecondsRealtime(delay);
+        restoreTime = true; // will ramp time back using unscaled delta
+    }
+
+    public int Health
+    {
+        get { return health; }
+        set
+        { 
+            if (health != value)
+            {
+                health = Mathf.Clamp(value, 0, maxHealth);
+
+                if (OnHealthChangedCallback != null)
+                {
+                    OnHealthChangedCallback.Invoke();
+                }
+            }
+        }
+    }
+
+    private void HandleHealing()
+    {
+        if ((_playerControls.Player.CastAndHeal.IsPressed()) && (castOrHealTimer > 0.05f) && (Health < maxHealth) && (Mana > 0) && (Grounded()) && (!_playerStateList.IsDashing))
+        {
+            _playerStateList.IsHealing = true;
+
+            // Smoothly progress through blend tree: Start (0) -> Loop (0.5)
+            healBlendValue += Time.deltaTime * healBlendSpeed;
+            
+            // Clamp to stay in the loop phase (between start and end)
+            healBlendValue = Mathf.Clamp(healBlendValue, 0f, 0.5f);
+            
+            // IMPORTANT: Update this every frame while healing
+            _animator.SetFloat("Motion", healBlendValue);
+
+            // Healing logic
+            healTimer += Time.deltaTime;
+            if (healTimer >= timeToHeal)
+            {
+                Health += 1;
+                healTimer = 0;
+            }
+
+            // Drain Mana
+            Mana -= Time.deltaTime * manaDrainSpeed;
+        }
+        else
+        {
+            // If we were healing, play the end animation
+            if (_playerStateList.IsHealing)
+            {
+                // Trigger end animation
+                _animator.SetFloat("Motion", 1f);
+            }
+            
+            _playerStateList.IsHealing = false;
+            healTimer = 0;
+            healBlendValue = 0f; // Reset immediately for next time
+        }
+    }
+
+    public float Mana
+    {
+        get 
+        { 
+            return mana; 
+        }
+        set 
+        {
+            if (mana != value)
+            {
+                mana = Mathf.Clamp(value, 0, 1);
+                manaStorage.fillAmount = Mana;
+            }
+        }
+    }
+
+    private void UpdateAnimationState()
+    {
+        string newState;
+
+        // HURT should have high priority
+        if (_playerStateList.IsInvincible && health > 0)
+        {
+            newState = STATE_HURT;
+        }
+        else if (_playerStateList.IsHealing)
+        {
+            newState = STATE_HEALING;
+            // Keep updating the blend parameter while in healing state
+            _animator.SetFloat("Motion", healBlendValue);
+        }
+        else if (_playerStateList.IsCasting)
+        {
+            newState = STATE_CASTING;
+        }
+        else if (_playerStateList.IsAttacking)
+        {
+            newState = _attackAnimationStarted;
+        }
+        else if (_playerStateList.IsDashing)
+        {
+            newState = STATE_DASH;
+        }
+        else if (!Grounded())
+        {
+            newState = STATE_JUMP;
+        }
+        else if (Mathf.Abs(_rigidbody2D.linearVelocity.x) > 0.01f)
+        {
+            newState = STATE_WALK;
+        }
+        else
+        {
+            newState = STATE_IDLE;
+        }
+
+        if (newState != _currentState)
+        {
+            _animator.Play(newState);
+            _currentState = newState;
+        }
+    }
+
+    public void OnSpellCastFrame()
+    {
+        // This will be called by the Animation Event
+        //Side cast
+        if (yAxis == 0 || (yAxis < 0 && Grounded()))
+        {
+            GameObject spell = Instantiate(sideSpellFireball, SideAttackTransform.position, Quaternion.identity);
+
+            if (_playerStateList.IsLookingRight)
+            {
+                spell.transform.rotation = Quaternion.Euler(0, 0, 0);
+            }
+            else
+            {
+                spell.transform.rotation = Quaternion.Euler(0, 180, 0);
+            }
+            _playerStateList.IsRecoilingXAxis = true;
+        }
+        //Up cast
+        else if (yAxis > 0)
+        {
+            GameObject spell = Instantiate(upSpellExplosion, transform);
+            _rigidbody2D.linearVelocity = Vector2.zero;
+        }
+        //Down cast
+        else if (yAxis < 0)
+        {
+            downSpellFireball.SetActive(true);
+        }
+
+        Mana -= manaSpellCost;
+    }
+
+    public void OnSpellCastEnd()
+    {
+        _playerStateList.IsCasting = false;
     }
 
     private void OnDrawGizmos()
@@ -486,6 +805,6 @@ public class PlayerController : MonoBehaviour
         Gizmos.DrawWireCube(DownAttackTransform.position, DownAttackArea);
     }
 
-    public int Health { get => health; set => health = value; }
-    public int MaxHealth { get => maxHealth; set => maxHealth = value; }
+    public int GetHealth() => health;
+    public int GetMaxHealth() => maxHealth;
 }

@@ -1,0 +1,10 @@
+version: 2
+type: animation
+name: Collect Heart Piece End
+consistent_sprite_size: true
+enable_borders: true
+use_sprite_name: true
+sprites: 3
+0	Collect Heart Piece End_collect_magical0017_000.png
+1	Collect Heart Piece End_collect_magical0007_001.png
+2	Collect Heart Piece End_collect_magical0006_002.png
