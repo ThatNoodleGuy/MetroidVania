@@ -32,7 +32,7 @@ public class SceneTransition : MonoBehaviour
 
             PlayerController.Instance.GetComponent<PlayerStateList>().IsInCutscene = true;
 
-            SceneManager.LoadScene(transitionTo);
+            StartCoroutine(UIManager.Instance.sceneFader.FadeAndLoadScene(SceneFader.FadeDirection.In, transitionTo));
         }
     }
 }
