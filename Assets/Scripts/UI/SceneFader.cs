@@ -1,22 +1,23 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 public class SceneFader : MonoBehaviour
 {
-    [SerializeField] private float fadeTime;
+    [SerializeField]
+    private float fadeTime;
 
     private Image fadeOutUIImage;
 
     public enum FadeDirection
     {
         In,
-        Out
+        Out,
     }
 
-    void Start()
+    private void Awake()
     {
         fadeOutUIImage = GetComponent<Image>();
     }
@@ -61,8 +62,19 @@ public class SceneFader : MonoBehaviour
 
     private void SetColorImage(ref float _alpha, FadeDirection _fadeDirection)
     {
-        fadeOutUIImage.color = new Color(fadeOutUIImage.color.r, fadeOutUIImage.color.g, fadeOutUIImage.color.b, _alpha);
+        fadeOutUIImage.color = new Color(
+            fadeOutUIImage.color.r,
+            fadeOutUIImage.color.g,
+            fadeOutUIImage.color.b,
+            _alpha
+        );
 
         _alpha += Time.deltaTime * (1 / fadeTime) * (_fadeDirection == FadeDirection.Out ? -1 : 1);
+    }
+
+    public float FadeTime
+    {
+        get => fadeTime;
+        set => fadeTime = value;
     }
 }

@@ -68,5 +68,29 @@
     },
     "dotnet.defaultSolution": "MetroidVania.slnx",
     "dotnetAcquisitionExtension.existingDotnetPath": "C:\\Program Files\\dotnet\\dotnet.exe",
-    "csharp.suppressDotnetRestoreNotification": true
+    "csharp.suppressDotnetRestoreNotification": true,
+
+    "omnisharp.enableEditorConfigSupport": true,
+    "omnisharp.enableRoslynAnalyzers": true,
+    
+    // Formatting preferences
+    "csharp.format.enable": true,
+    
+    // Global formatting settings
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+    
+    // Prettier configuration
+    "prettier.tabWidth": 4,
+    "prettier.useTabs": false,
+    "prettier.endOfLine": "crlf",
+    
+    // C# specific (CSharpier)
+    "[csharp]": {
+        "editor.defaultFormatter": "csharpier.csharpier-vscode",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.fixAll": "explicit"
+        }
+    }
 }

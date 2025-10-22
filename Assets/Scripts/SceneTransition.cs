@@ -14,7 +14,7 @@ public class SceneTransition : MonoBehaviour
 
     private void Start() 
     {
-        if (transitionTo == GameManager.Instance.transitionedFromScene)
+        if (transitionTo == GameManager.Instance.TransitionedFromScene)
         {
             PlayerController.Instance.transform.position = startPoint.position;
 
@@ -28,9 +28,10 @@ public class SceneTransition : MonoBehaviour
     {
         if (other.GetComponent<PlayerController>())
         {
-            GameManager.Instance.transitionedFromScene = SceneManager.GetActiveScene().name;
+            GameManager.Instance.TransitionedFromScene = SceneManager.GetActiveScene().name;
 
             PlayerController.Instance.GetComponent<PlayerStateList>().IsInCutscene = true;
+            PlayerController.Instance.GetComponent<PlayerStateList>().IsInvincible = true;
 
             StartCoroutine(UIManager.Instance.sceneFader.FadeAndLoadScene(SceneFader.FadeDirection.In, transitionTo));
         }

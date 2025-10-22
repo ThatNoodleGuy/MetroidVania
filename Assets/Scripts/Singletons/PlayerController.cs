@@ -1,10 +1,10 @@
 using System;
-using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 public class PlayerController : MonoBehaviour
 {
@@ -23,111 +23,215 @@ public class PlayerController : MonoBehaviour
     private const string STATE_CASTING = "Player_Cast";
 
     [Header("General Settings")]
-    [SerializeField] private Transform visualRoot;
+    [SerializeField]
+    private Transform visualRoot;
     private float visualBaseXScale;
-    [SerializeField] private PlayerControls _playerControls;
-    [SerializeField] private PlayerStateList _playerStateList;
-    [SerializeField] private Rigidbody2D _rigidbody2D;
-    [SerializeField] private Animator _animator;
+
+    [SerializeField]
+    private PlayerControls _playerControls;
+
+    [SerializeField]
+    private PlayerStateList _playerStateList;
+
+    [SerializeField]
+    private Rigidbody2D _rigidbody2D;
+
+    [SerializeField]
+    private Animator _animator;
     private SpriteRenderer _spriteRenderer;
-    private float xAxis, yAxis;
+    private float xAxis,
+        yAxis;
     private bool canFlash = true;
     private float _gravity;
     private string _currentState;
-    [Space(5)]
 
+    [Space(5)]
     [Header("Horizontal Movement Settings")]
-    [SerializeField] private float walkSpeed = 1f;
-    [Space(5)]
+    [SerializeField]
+    private float walkSpeed = 1f;
 
+    [Space(5)]
     [Header("Vertical Movement Settings")]
-    [SerializeField] private float jumpForce = 45f;
+    [SerializeField]
+    private float jumpForce = 45f;
     private float jumpBufferCounter = 0;
-    [SerializeField] private float jumpBufferFrames;
+
+    [SerializeField]
+    private float jumpBufferFrames;
     private float coyoteTimeCounter = 0;
-    [SerializeField] private float coyoteTime;
+
+    [SerializeField]
+    private float coyoteTime;
     private int airJumpCounter = 0;
-    [SerializeField] private int maxAirJumps;
-    [Space(5)]
 
+    [SerializeField]
+    private int maxAirJumps;
+
+    [Space(5)]
     [Header("Ground Check Settings")]
-    [SerializeField] private Transform groundCheckPoint;
-    [SerializeField] private float groundCheckY = 0.2f;
-    [SerializeField] private float groundCheckX = 0.5f;
-    [SerializeField] private LayerMask whatIsGround;
-    [Space(5)]
+    [SerializeField]
+    private Transform groundCheckPoint;
 
+    [SerializeField]
+    private float groundCheckY = 0.2f;
+
+    [SerializeField]
+    private float groundCheckX = 0.5f;
+
+    [SerializeField]
+    private LayerMask whatIsGround;
+
+    [Space(5)]
     [Header("Dash Settings")]
-    [SerializeField] private float dashSpeed;
-    [SerializeField] private float dashTime;
-    [SerializeField] private float dashCooldown;
+    [SerializeField]
+    private float dashSpeed;
+
+    [SerializeField]
+    private float dashTime;
+
+    [SerializeField]
+    private float dashCooldown;
+
     // [SerializeField]private Transform dashEffectOriginPoint;
-    [SerializeField] private GameObject dashEffectVFXPrefab;
-    [SerializeField] private Transform dashEffectOrigin;   // empty child under VisualRoot at the feet
+    [SerializeField]
+    private GameObject dashEffectVFXPrefab;
+
+    [SerializeField]
+    private Transform dashEffectOrigin; // empty child under VisualRoot at the feet
     private bool canDash = true;
     private bool dashed;
-    [Space(5)]
 
+    [Space(5)]
     [Header("Attack Settings:")]
-    [SerializeField] private Transform SideAttackTransform;
-    [SerializeField] private Vector2 SideAttackArea;
-    [SerializeField] private Transform UpAttackTransform;
-    [SerializeField] private Vector2 UpAttackArea;
-    [SerializeField] private Transform DownAttackTransform;
-    [SerializeField] private Vector2 DownAttackArea;
-    [SerializeField] private LayerMask attackableLayer;
-    [SerializeField] private float timeBetweenAttacks;
+    [SerializeField]
+    private Transform SideAttackTransform;
+
+    [SerializeField]
+    private Vector2 SideAttackArea;
+
+    [SerializeField]
+    private Transform UpAttackTransform;
+
+    [SerializeField]
+    private Vector2 UpAttackArea;
+
+    [SerializeField]
+    private Transform DownAttackTransform;
+
+    [SerializeField]
+    private Vector2 DownAttackArea;
+
+    [SerializeField]
+    private LayerMask attackableLayer;
+
+    [SerializeField]
+    private float timeBetweenAttacks;
     private float timeSinceAttack;
     private string _attackAnimationStarted;
-    [SerializeField] private float damage;
-    [SerializeField] private GameObject slashEffectWideVFXPrefab;
-    [SerializeField] private float hitForce;
+
+    [SerializeField]
+    private float damage;
+
+    [SerializeField]
+    private GameObject slashEffectWideVFXPrefab;
+
+    [SerializeField]
+    private float hitForce;
     private bool restoreTime;
     private float restoreTimeSpeed;
-    [Space(5)]
 
+    [Space(5)]
     [Header("Recoil Settings:")]
-    [SerializeField] private int recoilXSteps = 5;
-    [SerializeField] private int recoilYSteps = 5;
-    [SerializeField] private float recoilXSpeed = 100f;
-    [SerializeField] private float recoilYSpeed = 100f;
-    private int stepsXRecoiled, stepsYRecoiled;
-    [Space(5)]
+    [SerializeField]
+    private int recoilXSteps = 5;
 
+    [SerializeField]
+    private int recoilYSteps = 5;
+
+    [SerializeField]
+    private float recoilXSpeed = 100f;
+
+    [SerializeField]
+    private float recoilYSpeed = 100f;
+    private int stepsXRecoiled,
+        stepsYRecoiled;
+
+    [Space(5)]
     [Header("Health Settings:")]
-    [SerializeField] private int health;
-    [SerializeField] private int maxHealth;
-    [SerializeField] private float invincibilityDuration = 1f;
-    [SerializeField] private GameObject bloodSpurtVFXPrefab;
-    [SerializeField] private float hitFlashSpeed;
+    [SerializeField]
+    private int health;
+
+    [SerializeField]
+    private int maxHealth;
+
+    [SerializeField]
+    private float invincibilityDuration = 1f;
+
+    [SerializeField]
+    private GameObject bloodSpurtVFXPrefab;
+
+    [SerializeField]
+    private float hitFlashSpeed;
     private bool hitStopActive;
     public delegate void OnHealthChangedDelegate();
-    [HideInInspector] public OnHealthChangedDelegate OnHealthChangedCallback;
+
+    [HideInInspector]
+    public OnHealthChangedDelegate OnHealthChangedCallback;
     private float healTimer;
-    [SerializeField] private float timeToHeal;
-    [Space(5)]
 
+    [SerializeField]
+    private float timeToHeal;
+
+    [Space(5)]
     [Header("Mana Settings:")]
-    [SerializeField] private Image manaStorage;
-    [SerializeField] private float mana;
-    [SerializeField] private float manaDrainSpeed;
-    [SerializeField] private float manaGain;
-    [SerializeField] private float healBlendSpeed = 2f; // Speed to reach loop animation
-    private float healBlendValue = 0f; // Current position in blend tree
-    [Space(5)]
+    [SerializeField]
+    private Image manaStorage;
 
+    [SerializeField]
+    private float mana;
+
+    [SerializeField]
+    private float manaDrainSpeed;
+
+    [SerializeField]
+    private float manaGain;
+
+    [SerializeField]
+    private float healBlendSpeed = 2f; // Speed to reach loop animation
+    private float healBlendValue = 0f; // Current position in blend tree
+
+    [Space(5)]
     [Header("Spell Casting Settings:")]
-    [SerializeField] private float manaSpellCost = 0.3f;
-    [SerializeField] private float timeBetweenCasts = 0.3f;
-    [SerializeField] private float spellDamage; // upspell and downspell damage
-    [SerializeField] private float downSpellForce; // Dive down force
-    [SerializeField] private GameObject sideSpellFireball;
-    [SerializeField] private GameObject upSpellExplosion;
-    [SerializeField] private GameObject downSpellFireball;
-    [SerializeField] private AnimationClip spellCastAnimation;
+    [SerializeField]
+    private float manaSpellCost = 0.3f;
+
+    [SerializeField]
+    private float timeBetweenCasts = 0.3f;
+
+    [SerializeField]
+    private float spellDamage; // upspell and downspell damage
+
+    [SerializeField]
+    private float downSpellForce; // Dive down force
+
+    [SerializeField]
+    private GameObject sideSpellFireball;
+
+    [SerializeField]
+    private GameObject upSpellExplosion;
+
+    [SerializeField]
+    private GameObject downSpellFireball;
+
+    [SerializeField]
+    private AnimationClip spellCastAnimation;
     private float timeSinceCast;
     private float castOrHealTimer;
+
     [Space(5)]
+    [Header("Camera Stuff")]
+    [SerializeField]
+    private float playerFallSpeedThreshold = -10;
 
     //Buttons
     private Vector2 MoveValue;
@@ -174,7 +278,6 @@ public class PlayerController : MonoBehaviour
         _playerControls.Player.Jump.Enable();
         _playerControls.Player.Dash.Enable();
         _playerControls.Player.Attack.Enable();
-
     }
 
     private void OnDisable()
@@ -184,14 +287,14 @@ public class PlayerController : MonoBehaviour
         _playerControls.Player.Jump.Disable();
         _playerControls.Player.Dash.Disable();
         _playerControls.Player.Attack.Disable();
-
     }
 
     private void Update()
     {
-        if (_playerStateList.IsInCutscene) return;
+        if (_playerStateList.IsInCutscene)
+            return;
 
-        UpdateAxisInput();
+        UpdateInput();
         UpdateJumpVariables();
 
         timeSinceAttack += Time.deltaTime;
@@ -215,10 +318,24 @@ public class PlayerController : MonoBehaviour
         }
 
         RestoreTimeScale();
+        UpdateCameraYDampForPlayerFall();
+
+        if (_playerStateList.IsDashing)
+        {
+            UpdateAnimationState();
+            return;
+        }
+
         FlashWhileInvincible();
         HandleMovement();
         HandleHealing();
         HandleCastingSpell();
+
+        if (_playerStateList.IsHealing)
+        {
+            UpdateAnimationState();
+            return;
+        }
 
         HandlePlayerSpriteFlip();
         HandleJumping();
@@ -229,9 +346,11 @@ public class PlayerController : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (_playerStateList.IsInCutscene) return;
+        if (_playerStateList.IsInCutscene)
+            return;
 
-        if (_playerStateList.IsDashing || _playerStateList.IsHealing) return;
+        if (_playerStateList.IsDashing || _playerStateList.IsHealing)
+            return;
 
         HandleRecoiling();
     }
@@ -240,11 +359,17 @@ public class PlayerController : MonoBehaviour
     {
         if (collision.GetComponent<EnemyCore>() != null && _playerStateList.IsCasting)
         {
-            collision.GetComponent<EnemyCore>().EnemyHit(spellDamage, (collision.transform.position - transform.position).normalized, -recoilYSpeed);
+            collision
+                .GetComponent<EnemyCore>()
+                .EnemyGetsHit(
+                    spellDamage,
+                    (collision.transform.position - transform.position).normalized,
+                    -recoilYSpeed
+                );
         }
     }
 
-    private void UpdateAxisInput()
+    private void UpdateInput()
     {
         MoveValue = _playerControls.Player.Move.ReadValue<Vector2>();
         JumpValue = _playerControls.Player.Jump.WasPressedThisFrame();
@@ -258,10 +383,6 @@ public class PlayerController : MonoBehaviour
         if (_playerControls.Player.CastAndHeal.IsPressed())
         {
             castOrHealTimer += Time.deltaTime;
-        }
-        else
-        {
-            castOrHealTimer = 0f;
         }
     }
 
@@ -282,15 +403,24 @@ public class PlayerController : MonoBehaviour
 
     private void HandleCastingSpell()
     {
-        if ((_playerControls.Player.CastAndHeal.WasReleasedThisFrame()) && (castOrHealTimer <= 0.05f) && (timeSinceCast >= timeBetweenCasts) && (Mana >= manaSpellCost))
+        if (
+            (_playerControls.Player.CastAndHeal.WasReleasedThisFrame())
+            && (castOrHealTimer <= 0.1f)
+            && (timeSinceCast >= timeBetweenCasts)
+            && (Mana >= manaSpellCost)
+        )
         {
             _playerStateList.IsCasting = true;
             timeSinceCast = 0f;
-            // No coroutine needed!
         }
         else
         {
             timeSinceCast += Time.deltaTime;
+        }
+
+        if (!_playerControls.Player.CastAndHeal.IsPressed())
+        {
+            castOrHealTimer = 0f;
         }
 
         if (Grounded())
@@ -306,9 +436,21 @@ public class PlayerController : MonoBehaviour
 
     public bool Grounded()
     {
-        if (Physics2D.Raycast(groundCheckPoint.position, Vector2.down, groundCheckY, whatIsGround) ||
-        Physics2D.Raycast(groundCheckPoint.position + new Vector3(groundCheckX, 0, 0), Vector2.down, groundCheckY, whatIsGround) ||
-        Physics2D.Raycast(groundCheckPoint.position + new Vector3(-groundCheckX, 0, 0), Vector2.down, groundCheckY, whatIsGround))
+        if (
+            Physics2D.Raycast(groundCheckPoint.position, Vector2.down, groundCheckY, whatIsGround)
+            || Physics2D.Raycast(
+                groundCheckPoint.position + new Vector3(groundCheckX, 0, 0),
+                Vector2.down,
+                groundCheckY,
+                whatIsGround
+            )
+            || Physics2D.Raycast(
+                groundCheckPoint.position + new Vector3(-groundCheckX, 0, 0),
+                Vector2.down,
+                groundCheckY,
+                whatIsGround
+            )
+        )
         {
             return true;
         }
@@ -325,7 +467,7 @@ public class PlayerController : MonoBehaviour
             _rigidbody2D.linearVelocity = new Vector3(_rigidbody2D.linearVelocity.x, jumpForce, 0);
             _playerStateList.IsJumping = true;
         }
-        
+
         if (!Grounded() && airJumpCounter < maxAirJumps && JumpValue)
         {
             _playerStateList.IsJumping = true;
@@ -369,12 +511,14 @@ public class PlayerController : MonoBehaviour
     {
         if (xAxis < 0)
         {
-            transform.localScale = new Vector2(-1, transform.localScale.y);
+            // transform.localScale = new Vector2(-1, transform.localScale.y);
+            transform.eulerAngles = new Vector2(0, 180);
             _playerStateList.IsLookingRight = false;
         }
         else if (xAxis > 0)
         {
-            transform.localScale = new Vector2(1, transform.localScale.y);
+            // transform.localScale = new Vector2(1, transform.localScale.y);
+            transform.eulerAngles = new Vector2(0, 0);
             _playerStateList.IsLookingRight = true;
         }
     }
@@ -423,31 +567,52 @@ public class PlayerController : MonoBehaviour
 
             if (yAxis == 0 || yAxis < 0 && Grounded())
             {
-                Hit(SideAttackTransform, SideAttackArea, ref _playerStateList.IsRecoilingXAxis, recoilXSpeed);
+                int recoilLeftOrRight = _playerStateList.IsLookingRight ? 1 : -1;
+
+                Hit(
+                    SideAttackTransform,
+                    SideAttackArea,
+                    ref _playerStateList.IsRecoilingXAxis,
+                    Vector2.right * recoilLeftOrRight,
+                    recoilXSpeed
+                );
+
                 GameObject slashEffect = Instantiate(slashEffectWideVFXPrefab, SideAttackTransform);
                 // SlashEffectAtAngle(slashEffectWideVFXPrefab, 0 , SideAttackTransform);
             }
             else if (yAxis > 0)
             {
-                Hit(UpAttackTransform, UpAttackArea, ref _playerStateList.IsRecoilingYAxis, recoilYSpeed);
+                Hit(UpAttackTransform, UpAttackArea, ref _playerStateList.IsRecoilingYAxis, Vector2.up, recoilYSpeed);
                 SlashEffectAtAngle(slashEffectWideVFXPrefab, 80, UpAttackTransform);
             }
             else if (yAxis < 0 && !Grounded())
             {
-                Hit(DownAttackTransform, DownAttackArea, ref _playerStateList.IsRecoilingYAxis, recoilYSpeed);
+                Hit(
+                    DownAttackTransform,
+                    DownAttackArea,
+                    ref _playerStateList.IsRecoilingYAxis,
+                    Vector2.down,
+                    recoilYSpeed
+                );
                 SlashEffectAtAngle(slashEffectWideVFXPrefab, -90, DownAttackTransform);
             }
         }
     }
 
-    private void Hit(Transform attackTransform, Vector3 attackArea, ref bool recoilDir, float recoilStrength)
+    private void Hit(
+        Transform attackTransform,
+        Vector3 attackArea,
+        ref bool recoilBool,
+        Vector2 recoilDir,
+        float recoilStrength
+    )
     {
         Collider2D[] objectsToHit = Physics2D.OverlapBoxAll(attackTransform.position, attackArea, 0, attackableLayer);
         List<EnemyCore> enemiesHit = new List<EnemyCore>();
 
         if (objectsToHit.Length > 0)
         {
-            recoilDir = true;
+            recoilBool = true;
         }
 
         for (int i = 0; i < objectsToHit.Length; i++)
@@ -457,7 +622,7 @@ public class PlayerController : MonoBehaviour
                 EnemyCore enemy = objectsToHit[i].GetComponent<EnemyCore>();
                 if (enemy && !enemiesHit.Contains(enemy))
                 {
-                    enemy.EnemyHit(damage, (transform.position - objectsToHit[i].transform.position).normalized, recoilStrength);
+                    enemy.EnemyGetsHit(damage, recoilDir, recoilStrength);
                     enemiesHit.Add(enemy);
                 }
 
@@ -549,11 +714,11 @@ public class PlayerController : MonoBehaviour
     public void TakeDamage(float damage)
     {
         Health -= Mathf.RoundToInt(damage);
-        
+
         // Cancel any ongoing attacks
         _playerStateList.IsAttacking = false;
         _attackAnimationStarted = null;
-        
+
         StartCoroutine(StopTakingDamageRoutine());
     }
 
@@ -569,9 +734,9 @@ public class PlayerController : MonoBehaviour
 
     private void FlashWhileInvincible()
     {
-        if (_playerStateList.IsInvincible)
+        if (_playerStateList.IsInvincible && !_playerStateList.IsInCutscene)
         {
-            if(Time.timeScale > 0.2 && canFlash)
+            if (Time.timeScale > 0.2 && canFlash)
             {
                 StartCoroutine(FlashRoutine());
             }
@@ -609,9 +774,10 @@ public class PlayerController : MonoBehaviour
 
     public void HitStopTime(float newTimeScale, int restoreSpeed, float delay)
     {
-        if (hitStopActive) return;
+        if (hitStopActive)
+            return;
         hitStopActive = true;
-    
+
         restoreTimeSpeed = restoreSpeed;
         Time.timeScale = Mathf.Clamp(newTimeScale, 0f, 1f);
 
@@ -637,7 +803,7 @@ public class PlayerController : MonoBehaviour
     {
         get { return health; }
         set
-        { 
+        {
             if (health != value)
             {
                 health = Mathf.Clamp(value, 0, maxHealth);
@@ -652,16 +818,23 @@ public class PlayerController : MonoBehaviour
 
     private void HandleHealing()
     {
-        if ((_playerControls.Player.CastAndHeal.IsPressed()) && (castOrHealTimer > 0.05f) && (Health < maxHealth) && (Mana > 0) && (Grounded()) && (!_playerStateList.IsDashing))
+        if (
+            (_playerControls.Player.CastAndHeal.IsPressed())
+            && (castOrHealTimer > 0.1f)
+            && (Health < maxHealth)
+            && (Mana > 0)
+            && (Grounded())
+            && (!_playerStateList.IsDashing)
+        )
         {
             _playerStateList.IsHealing = true;
 
             // Smoothly progress through blend tree: Start (0) -> Loop (0.5)
             healBlendValue += Time.deltaTime * healBlendSpeed;
-            
+
             // Clamp to stay in the loop phase (between start and end)
             healBlendValue = Mathf.Clamp(healBlendValue, 0f, 0.5f);
-            
+
             // IMPORTANT: Update this every frame while healing
             _animator.SetFloat("Motion", healBlendValue);
 
@@ -684,7 +857,7 @@ public class PlayerController : MonoBehaviour
                 // Trigger end animation
                 _animator.SetFloat("Motion", 1f);
             }
-            
+
             _playerStateList.IsHealing = false;
             healTimer = 0;
             healBlendValue = 0f; // Reset immediately for next time
@@ -693,10 +866,7 @@ public class PlayerController : MonoBehaviour
 
     public float Mana
     {
-        get
-        {
-            return mana;
-        }
+        get { return mana; }
         set
         {
             if (mana != value)
@@ -706,9 +876,11 @@ public class PlayerController : MonoBehaviour
             }
         }
     }
-    
+
     public IEnumerator WalkIntoNewSceneRoutine(Vector2 exitDir, float delay)
     {
+        _playerStateList.IsInvincible = true;
+
         if (exitDir.y > 0)
         {
             _rigidbody2D.linearVelocity = new Vector2(0, walkSpeed);
@@ -723,6 +895,7 @@ public class PlayerController : MonoBehaviour
         HandlePlayerSpriteFlip();
 
         yield return new WaitForSecondsRealtime(delay);
+        _playerStateList.IsInvincible = false;
         _playerStateList.IsInCutscene = false;
     }
 
@@ -811,6 +984,30 @@ public class PlayerController : MonoBehaviour
         _playerStateList.IsCasting = false;
     }
 
+    private void UpdateCameraYDampForPlayerFall()
+    {
+        //if falling past a certain speed threshold
+        if (
+            _rigidbody2D.linearVelocity.y < playerFallSpeedThreshold
+            && !CameraManager.Instance.IsLerpingYDamping
+            && !CameraManager.Instance.HasLerpedYDamping
+        )
+        {
+            StartCoroutine(CameraManager.Instance.LerpYDamping(true));
+        }
+        //if standing stil or moving up
+        if (
+            _rigidbody2D.linearVelocity.y >= 0
+            && !CameraManager.Instance.IsLerpingYDamping
+            && CameraManager.Instance.HasLerpedYDamping
+        )
+        {
+            //reset camera function
+            CameraManager.Instance.HasLerpedYDamping = false;
+            StartCoroutine(CameraManager.Instance.LerpYDamping(false));
+        }
+    }
+
     private void OnDrawGizmos()
     {
         Gizmos.color = Color.red;
@@ -819,6 +1016,19 @@ public class PlayerController : MonoBehaviour
         Gizmos.DrawWireCube(DownAttackTransform.position, DownAttackArea);
     }
 
+    public PlayerStateList PlayerStateList
+    {
+        get { return _playerStateList; }
+        set { _playerStateList = value; }
+    }
+
     public int GetHealth() => health;
+
     public int GetMaxHealth() => maxHealth;
+
+    public Rigidbody2D _Rigidbody2D
+    {
+        get { return _rigidbody2D; }
+        set { _rigidbody2D = value; }
+    }
 }

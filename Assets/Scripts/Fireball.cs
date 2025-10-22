@@ -24,7 +24,7 @@ public class Fireball : MonoBehaviour
     {
         if (other.GetComponent<EnemyCore>() != null)
         {
-            other.GetComponent<EnemyCore>().EnemyHit(damage, (other.transform.position - transform.position).normalized, -hitForce);
+            other.GetComponent<EnemyCore>().EnemyGetsHit(damage, (other.transform.position - transform.position).normalized, -hitForce);
         }
     }
 }

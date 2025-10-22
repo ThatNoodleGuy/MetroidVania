@@ -1,0 +1,53 @@
+# EditorConfig is awesome: https://editorconfig.org/
+root = true
+
+# ---------------------------
+# Global defaults
+# ---------------------------
+[*]
+charset = utf-8
+indent_style = space
+indent_size = 4
+# Use LF to avoid CRLF/LF churn across tools; CSharpier normalizes safely.
+end_of_line = lf
+# These 2 are recommended with CSharpier
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# ---------------------------
+# C# files
+# ---------------------------
+[*.cs]
+# These Roslyn-style options are harmless with CSharpier and still help other tools
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+csharp_new_line_before_members_in_object_initializers = true
+csharp_new_line_before_members_in_anonymous_types = true
+csharp_new_line_between_query_expression_clauses = true
+
+# Preserve concise single-line constructs where possible (non-blocking hints)
+csharp_preserve_single_line_blocks = true
+csharp_preserve_single_line_statements = true
+
+# NOTE ABOUT ATTRIBUTES ON THE SAME LINE:
+# Neither vanilla .editorconfig nor CSharpier exposes a knob to enforce
+# [SerializeField] private float foo; on a single line.
+# If you need a specific declaration to stay single-line, add:
+#   // csharpier-ignore
+# immediately above that field (CSharpier will skip reformatting it).
+
+# ---------------------------
+# Common MSBuild/XML-ish files (nicer 2-space indent)
+# ---------------------------
+[*.{config,csproj,props,slnx,targets,xaml,xml}]
+indent_style = space
+indent_size = 2
+max_line_length = 100
+
+# ---------------------------
+# CSharpier’s own .editorconfig guidance (mirrors docs)
+# ---------------------------
+# If you prefer, you can constrain max line length signaling for other tools:
+max_line_length = 100
