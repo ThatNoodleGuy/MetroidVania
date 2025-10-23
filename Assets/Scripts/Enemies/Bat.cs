@@ -21,6 +21,17 @@ public class Bat : EnemyCore
         ChangeState(EnemyState.Bat_Idle);
     }
 
+    protected override void Update()
+    {
+        base.Update();
+
+        if (!PlayerController.Instance.GetComponent<PlayerStateList>().IsAlive)
+        {
+            ChangeState(EnemyState.Bat_Idle);
+            return;
+        }
+    }
+
     protected override void UpdateEnemyStates()
     {
         float distance = Vector2.Distance(

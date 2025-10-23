@@ -24,10 +24,6 @@ public class PlayerController : MonoBehaviour
 
     [Header("General Settings")]
     [SerializeField]
-    private Transform visualRoot;
-    private float visualBaseXScale;
-
-    [SerializeField]
     private PlayerControls _playerControls;
 
     [SerializeField]
@@ -44,6 +40,7 @@ public class PlayerController : MonoBehaviour
     private bool canFlash = true;
     private float _gravity;
     private string _currentState;
+    private bool openMap;
 
     [Space(5)]
     [Header("Horizontal Movement Settings")]
@@ -182,6 +179,16 @@ public class PlayerController : MonoBehaviour
     [SerializeField]
     private float timeToHeal;
 
+    private HealingPhase currentHealingPhase = HealingPhase.None;
+
+    private enum HealingPhase
+    {
+        None,
+        Starting, // 0.0 - 0.5 in blend tree
+        Looping, // Stays at 0.5
+        Ending, // 0.5 - 1.0 in blend tree
+    }
+
     [Space(5)]
     [Header("Mana Settings:")]
     [SerializeField]
@@ -199,6 +206,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField]
     private float healBlendSpeed = 2f; // Speed to reach loop animation
     private float healBlendValue = 0f; // Current position in blend tree
+    private bool halfMana;
 
     [Space(5)]
     [Header("Spell Casting Settings:")]
@@ -234,27 +242,45 @@ public class PlayerController : MonoBehaviour
     private float playerFallSpeedThreshold = -10;
 
     //Buttons
-    private Vector2 MoveValue;
-    private bool JumpValue;
-    private bool JumpValueRelease;
-    private bool DashValue;
-    private bool AttackValue;
+    [HideInInspector]
+    public Vector2 MoveValue;
+
+    [HideInInspector]
+    public bool JumpValue;
+
+    [HideInInspector]
+    public bool JumpValueRelease;
+
+    [HideInInspector]
+    public bool DashValue;
+
+    [HideInInspector]
+    public bool AttackValue;
+
+    [HideInInspector]
+    public bool InteractValue;
+
+    [HideInInspector]
+    public bool MapValue;
+
+    [HideInInspector]
+    public bool SaveValue;
 
     private void Awake()
     {
         if (Instance == null)
         {
             Instance = this;
+            DontDestroyOnLoad(gameObject);
         }
         else if (Instance != this && Instance != null)
         {
             Destroy(gameObject);
+            return;
         }
 
         _playerControls = new PlayerControls();
         _playerControls.Player.Enable();
-
-        DontDestroyOnLoad(gameObject);
     }
 
     private void Start()
@@ -263,6 +289,8 @@ public class PlayerController : MonoBehaviour
         _animator = GetComponent<Animator>();
         _playerStateList = GetComponent<PlayerStateList>();
         _spriteRenderer = GetComponent<SpriteRenderer>();
+
+        _playerStateList.IsAlive = true;
 
         Health = maxHealth;
         _gravity = _rigidbody2D.gravityScale;
@@ -278,6 +306,10 @@ public class PlayerController : MonoBehaviour
         _playerControls.Player.Jump.Enable();
         _playerControls.Player.Dash.Enable();
         _playerControls.Player.Attack.Enable();
+        _playerControls.Player.CastAndHeal.Enable();
+        _playerControls.Player.Interact.Enable();
+        _playerControls.Player.Map.Enable();
+        _playerControls.Player.Save.Enable();
     }
 
     private void OnDisable()
@@ -287,60 +319,69 @@ public class PlayerController : MonoBehaviour
         _playerControls.Player.Jump.Disable();
         _playerControls.Player.Dash.Disable();
         _playerControls.Player.Attack.Disable();
+        _playerControls.Player.Interact.Disable();
+        _playerControls.Player.Map.Disable();
+        _playerControls.Player.Save.Disable();
     }
 
     private void Update()
     {
+        // Don't update anything during cutscenes
         if (_playerStateList.IsInCutscene)
             return;
 
+        // Don't allow any player actions when dead
+        if (!_playerStateList.IsAlive)
+        {
+            UpdateAnimationState(); // Still update animation to show death
+            return;
+        }
+
         UpdateInput();
         UpdateJumpVariables();
-
         timeSinceAttack += Time.deltaTime;
-
-        if (_playerStateList.IsDashing || _playerStateList.IsHealing)
-        {
-            UpdateAnimationState();
-            return;
-        }
-
-        if (_playerStateList.IsAttacking && timeSinceAttack >= timeBetweenAttacks)
-        {
-            _playerStateList.IsAttacking = false;
-        }
-
-        if (_playerStateList.IsAttacking)
-        {
-            // Update attack timer but don't allow movement
-            UpdateAnimationState();
-            return;
-        }
-
         RestoreTimeScale();
         UpdateCameraYDampForPlayerFall();
+        ToggleMap();
 
+        // Dashing state - blocks most other actions
         if (_playerStateList.IsDashing)
         {
             UpdateAnimationState();
             return;
         }
 
+        // Healing state - blocks most other actions
+        if (_playerStateList.IsHealing)
+        {
+            UpdateAnimationState();
+        }
+
+        // Attacking state - allow attack to complete
+        if (_playerStateList.IsAttacking)
+        {
+            // Check if attack animation should end
+            if (timeSinceAttack >= timeBetweenAttacks)
+            {
+                _playerStateList.IsAttacking = false;
+            }
+            else
+            {
+                // Still attacking - block movement
+                UpdateAnimationState();
+                return;
+            }
+        }
+
         FlashWhileInvincible();
         HandleMovement();
         HandleHealing();
         HandleCastingSpell();
-
-        if (_playerStateList.IsHealing)
-        {
-            UpdateAnimationState();
-            return;
-        }
-
         HandlePlayerSpriteFlip();
         HandleJumping();
         HandleDashing();
         HandleAttacking();
+
         UpdateAnimationState();
     }
 
@@ -376,6 +417,10 @@ public class PlayerController : MonoBehaviour
         JumpValueRelease = _playerControls.Player.Jump.WasReleasedThisFrame();
         DashValue = _playerControls.Player.Dash.WasPressedThisFrame();
         AttackValue = _playerControls.Player.Attack.WasPressedThisFrame();
+        InteractValue = _playerControls.Player.Interact.WasPressedThisFrame();
+        MapValue = _playerControls.Player.Map.IsPressed();
+        SaveValue = _playerControls.Player.Save.WasPressedThisFrame();
+        openMap = MapValue;
 
         xAxis = MoveValue.x;
         yAxis = MoveValue.y;
@@ -383,6 +428,37 @@ public class PlayerController : MonoBehaviour
         if (_playerControls.Player.CastAndHeal.IsPressed())
         {
             castOrHealTimer += Time.deltaTime;
+        }
+        else
+        {
+            castOrHealTimer = 0;
+        }
+    }
+
+    private void ToggleMap()
+    {
+        if (openMap)
+        {
+            UIManager.Instance.MapHandler.SetActive(true);
+        }
+        else
+        {
+            UIManager.Instance.MapHandler.SetActive(false);
+        }
+    }
+
+    public void Respawned()
+    {
+        if (!_playerStateList.IsAlive)
+        {
+            _playerStateList.IsAlive = true;
+            halfMana = true;
+            UIManager.Instance.SwitchManaState(UIManager.ManaState.HalfMana);
+            Mana = 0f;
+            Health = maxHealth;
+            // Force Idle state
+            _currentState = STATE_IDLE;
+            UpdateAnimationState();
         }
     }
 
@@ -582,7 +658,13 @@ public class PlayerController : MonoBehaviour
             }
             else if (yAxis > 0)
             {
-                Hit(UpAttackTransform, UpAttackArea, ref _playerStateList.IsRecoilingYAxis, Vector2.up, recoilYSpeed);
+                Hit(
+                    UpAttackTransform,
+                    UpAttackArea,
+                    ref _playerStateList.IsRecoilingYAxis,
+                    Vector2.up,
+                    recoilYSpeed
+                );
                 SlashEffectAtAngle(slashEffectWideVFXPrefab, 80, UpAttackTransform);
             }
             else if (yAxis < 0 && !Grounded())
@@ -607,7 +689,12 @@ public class PlayerController : MonoBehaviour
         float recoilStrength
     )
     {
-        Collider2D[] objectsToHit = Physics2D.OverlapBoxAll(attackTransform.position, attackArea, 0, attackableLayer);
+        Collider2D[] objectsToHit = Physics2D.OverlapBoxAll(
+            attackTransform.position,
+            attackArea,
+            0,
+            attackableLayer
+        );
         List<EnemyCore> enemiesHit = new List<EnemyCore>();
 
         if (objectsToHit.Length > 0)
@@ -634,11 +721,18 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    private void SlashEffectAtAngle(GameObject slashEffect, int effectAngle, Transform attackTransform)
+    private void SlashEffectAtAngle(
+        GameObject slashEffect,
+        int effectAngle,
+        Transform attackTransform
+    )
     {
         slashEffect = Instantiate(slashEffect, attackTransform);
         slashEffect.transform.eulerAngles = new Vector3(0, 0, effectAngle);
-        slashEffect.transform.localScale = new Vector2(transform.localScale.x, transform.localScale.y);
+        slashEffect.transform.localScale = new Vector2(
+            transform.localScale.x,
+            transform.localScale.y
+        );
     }
 
     private void HandleRecoiling()
@@ -660,11 +754,17 @@ public class PlayerController : MonoBehaviour
             _rigidbody2D.gravityScale = 0;
             if (yAxis < 0)
             {
-                _rigidbody2D.linearVelocity = new Vector2(_rigidbody2D.linearVelocity.x, recoilYSpeed);
+                _rigidbody2D.linearVelocity = new Vector2(
+                    _rigidbody2D.linearVelocity.x,
+                    recoilYSpeed
+                );
             }
             else
             {
-                _rigidbody2D.linearVelocity = new Vector2(_rigidbody2D.linearVelocity.x, -recoilYSpeed);
+                _rigidbody2D.linearVelocity = new Vector2(
+                    _rigidbody2D.linearVelocity.x,
+                    -recoilYSpeed
+                );
             }
 
             airJumpCounter = 0;
@@ -713,13 +813,26 @@ public class PlayerController : MonoBehaviour
 
     public void TakeDamage(float damage)
     {
-        Health -= Mathf.RoundToInt(damage);
+        if (_playerStateList.IsAlive)
+        {
+            Health -= Mathf.RoundToInt(damage);
 
-        // Cancel any ongoing attacks
-        _playerStateList.IsAttacking = false;
-        _attackAnimationStarted = null;
+            // Cancel any ongoing attacks
+            _playerStateList.IsAttacking = false;
+            _attackAnimationStarted = null;
 
-        StartCoroutine(StopTakingDamageRoutine());
+            if (Health <= 0)
+            {
+                _playerStateList.IsAlive = false;
+                Health = 0;
+                StartCoroutine(DeathRoutine());
+                return;
+            }
+            else
+            {
+                StartCoroutine(StopTakingDamageRoutine());
+            }
+        }
     }
 
     private IEnumerator StopTakingDamageRoutine()
@@ -818,49 +931,81 @@ public class PlayerController : MonoBehaviour
 
     private void HandleHealing()
     {
-        if (
-            (_playerControls.Player.CastAndHeal.IsPressed())
-            && (castOrHealTimer > 0.1f)
-            && (Health < maxHealth)
-            && (Mana > 0)
-            && (Grounded())
-            && (!_playerStateList.IsDashing)
-        )
+        bool wantsToHeal =
+            _playerControls.Player.CastAndHeal.IsPressed()
+            && castOrHealTimer > 0.1f
+            && Health < maxHealth
+            && Mana > 0
+            && Grounded()
+            && !_playerStateList.IsDashing;
+
+        // Starting to heal
+        if (wantsToHeal && currentHealingPhase == HealingPhase.None)
         {
             _playerStateList.IsHealing = true;
-
-            // Smoothly progress through blend tree: Start (0) -> Loop (0.5)
-            healBlendValue += Time.deltaTime * healBlendSpeed;
-
-            // Clamp to stay in the loop phase (between start and end)
-            healBlendValue = Mathf.Clamp(healBlendValue, 0f, 0.5f);
-
-            // IMPORTANT: Update this every frame while healing
-            _animator.SetFloat("Motion", healBlendValue);
-
-            // Healing logic
-            healTimer += Time.deltaTime;
-            if (healTimer >= timeToHeal)
-            {
-                Health += 1;
-                healTimer = 0;
-            }
-
-            // Drain Mana
-            Mana -= Time.deltaTime * manaDrainSpeed;
+            currentHealingPhase = HealingPhase.Starting;
+            healBlendValue = 0f;
         }
-        else
-        {
-            // If we were healing, play the end animation
-            if (_playerStateList.IsHealing)
-            {
-                // Trigger end animation
-                _animator.SetFloat("Motion", 1f);
-            }
 
-            _playerStateList.IsHealing = false;
-            healTimer = 0;
-            healBlendValue = 0f; // Reset immediately for next time
+        // Currently healing
+        if (_playerStateList.IsHealing)
+        {
+            // STARTING PHASE: Blend from start (0) to loop (0.5)
+            if (currentHealingPhase == HealingPhase.Starting)
+            {
+                healBlendValue += Time.deltaTime * healBlendSpeed;
+
+                if (healBlendValue >= 0.5f)
+                {
+                    healBlendValue = 0.5f;
+                    currentHealingPhase = HealingPhase.Looping;
+                }
+
+                _animator.SetFloat("Motion", healBlendValue);
+            }
+            // LOOPING PHASE: Stay at 0.5, perform healing
+            else if (currentHealingPhase == HealingPhase.Looping)
+            {
+                healBlendValue = 0.5f; // Keep at loop
+                _animator.SetFloat("Motion", healBlendValue);
+
+                if (wantsToHeal)
+                {
+                    // Perform healing
+                    healTimer += Time.deltaTime;
+                    if (healTimer >= timeToHeal)
+                    {
+                        Health += 1;
+                        healTimer = 0;
+                    }
+
+                    // Drain Mana
+                    Mana -= Time.deltaTime * manaDrainSpeed;
+                }
+                else
+                {
+                    // Button released or can't heal anymore - start ending
+                    currentHealingPhase = HealingPhase.Ending;
+                    healBlendValue = 0.5f; // Start from loop position
+                }
+            }
+            // ENDING PHASE: Blend from loop (0.5) to end (1.0)
+            else if (currentHealingPhase == HealingPhase.Ending)
+            {
+                healBlendValue += Time.deltaTime * healBlendSpeed;
+
+                if (healBlendValue >= 1f)
+                {
+                    healBlendValue = 1f;
+                    // End animation complete - reset everything
+                    _playerStateList.IsHealing = false;
+                    currentHealingPhase = HealingPhase.None;
+                    healTimer = 0;
+                    healBlendValue = 0f;
+                }
+
+                _animator.SetFloat("Motion", healBlendValue);
+            }
         }
     }
 
@@ -871,10 +1016,23 @@ public class PlayerController : MonoBehaviour
         {
             if (mana != value)
             {
-                mana = Mathf.Clamp(value, 0, 1);
+                if (!halfMana)
+                {
+                    mana = Mathf.Clamp(value, 0, 1);
+                }
+                else
+                {
+                    mana = Mathf.Clamp(value, 0, 0.5f);
+                }
                 manaStorage.fillAmount = Mana;
             }
         }
+    }
+
+    public void RestoreMana()
+    {
+        halfMana = false;
+        UIManager.Instance.SwitchManaState(UIManager.ManaState.FullMana);
     }
 
     public IEnumerator WalkIntoNewSceneRoutine(Vector2 exitDir, float delay)
@@ -899,20 +1057,46 @@ public class PlayerController : MonoBehaviour
         _playerStateList.IsInCutscene = false;
     }
 
+    private IEnumerator DeathRoutine()
+    {
+        _playerStateList.IsAlive = false;
+        Time.timeScale = 1f;
+        GameObject deathEffect = Instantiate(
+            bloodSpurtVFXPrefab,
+            transform.position,
+            Quaternion.identity
+        );
+        Destroy(deathEffect, 1.5f);
+        yield return new WaitForSeconds(0.9f);
+        StartCoroutine(UIManager.Instance.ActivateDeathScreenRoutine());
+
+        yield return new WaitForSeconds(0.8f);
+        GameObject shadeGO = Instantiate(
+            GameManager.Instance.PlayerShade,
+            transform.position,
+            Quaternion.identity
+        );
+    }
+
     private void UpdateAnimationState()
     {
         string newState;
 
+        if (Health <= 0 && _currentState != STATE_DEATH)
+        {
+            Health = 0;
+            newState = STATE_DEATH;
+        }
         // HURT should have high priority
-        if (_playerStateList.IsInvincible && health > 0)
+        else if (_playerStateList.IsInvincible && health > 0)
         {
             newState = STATE_HURT;
         }
-        else if (_playerStateList.IsHealing)
+        // IMPORTANT: Keep healing state active during ALL phases (including ending)
+        else if (_playerStateList.IsHealing || currentHealingPhase != HealingPhase.None)
         {
             newState = STATE_HEALING;
-            // Keep updating the blend parameter while in healing state
-            _animator.SetFloat("Motion", healBlendValue);
+            // The Motion parameter is already being updated in HandleHealing()
         }
         else if (_playerStateList.IsCasting)
         {
@@ -934,6 +1118,10 @@ public class PlayerController : MonoBehaviour
         {
             newState = STATE_WALK;
         }
+        else if (_currentState == STATE_IDLE)
+        {
+            newState = STATE_IDLE;
+        }
         else
         {
             newState = STATE_IDLE;
@@ -952,7 +1140,11 @@ public class PlayerController : MonoBehaviour
         //Side cast
         if (yAxis == 0 || (yAxis < 0 && Grounded()))
         {
-            GameObject spell = Instantiate(sideSpellFireball, SideAttackTransform.position, Quaternion.identity);
+            GameObject spell = Instantiate(
+                sideSpellFireball,
+                SideAttackTransform.position,
+                Quaternion.identity
+            );
 
             if (_playerStateList.IsLookingRight)
             {
@@ -1030,5 +1222,22 @@ public class PlayerController : MonoBehaviour
     {
         get { return _rigidbody2D; }
         set { _rigidbody2D = value; }
+    }
+
+    public bool HalfMana
+    {
+        get { return halfMana; }
+        set { halfMana = value; }
+    }
+
+    public int MaxHealth
+    {
+        get { return maxHealth; }
+        set { maxHealth = value; }
+    }
+
+    public PlayerControls GetPlayerControls()
+    {
+        return _playerControls;
     }
 }

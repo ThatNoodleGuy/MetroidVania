@@ -8,7 +8,7 @@ public class RespawnPoint : MonoBehaviour
 {
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (other.gameObject.GetComponent<PlayerController>())
+        if (other.gameObject.CompareTag("Player"))
         {
             GameManager.Instance.PlatfromingRespawnPoint = transform.position;
         }

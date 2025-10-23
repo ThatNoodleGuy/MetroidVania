@@ -329,7 +329,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9c128bfa3d921194d82cc88cc02dee17, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  visualRoot: {fileID: 0}
   _playerStateList: {fileID: 5369273531322127042}
   _rigidbody2D: {fileID: 5261792974152799607}
   _animator: {fileID: 6393725624171420469}
@@ -340,11 +339,11 @@ MonoBehaviour:
   maxAirJumps: 1
   groundCheckPoint: {fileID: 3115241566442590932}
   groundCheckY: 0.2
-  groundCheckX: 0.4
+  groundCheckX: 0.5
   whatIsGround:
     serializedVersion: 2
     m_Bits: 64
-  dashSpeed: 60
+  dashSpeed: 50
   dashTime: 0.2
   dashCooldown: 0.35
   dashEffectVFXPrefab: {fileID: 7007888875019141284, guid: 2827ff65716788d49a9a4ca6754c72ed, type: 3}
@@ -367,7 +366,7 @@ MonoBehaviour:
   recoilXSpeed: 50
   recoilYSpeed: 32
   health: 0
-  maxHealth: 10
+  maxHealth: 5
   invincibilityDuration: 1
   bloodSpurtVFXPrefab: {fileID: 7127452978911640569, guid: f75d0e43d3bd1a54aad6b51104e25684, type: 3}
   hitFlashSpeed: 10
@@ -385,6 +384,15 @@ MonoBehaviour:
   upSpellExplosion: {fileID: 352214837866345102, guid: a66e5a55526328a4a9145663feb9e760, type: 3}
   downSpellFireball: {fileID: 8028099836865784925}
   spellCastAnimation: {fileID: 7400000, guid: 94dea363e6613da478e325384fd1a316, type: 2}
+  playerFallSpeedThreshold: -10
+  MoveValue: {x: 0, y: 0}
+  JumpValue: 0
+  JumpValueRelease: 0
+  DashValue: 0
+  AttackValue: 0
+  InteractValue: 0
+  MapValue: 0
+  SaveValue: 0
 --- !u!114 &5369273531322127042
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -406,12 +414,12 @@ MonoBehaviour:
   IsLookingRight: 0
   IsInvincible: 0
   IsHealing: 0
-  IsDead: 0
   IsPaused: 0
   IsRespawning: 0
   IsRespawned: 0
   IsCasting: 0
   IsInCutscene: 0
+  IsAlive: 1
 --- !u!1 &7869290929820862773
 GameObject:
   m_ObjectHideFlags: 0

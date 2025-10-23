@@ -56,6 +56,12 @@ public class EnemyCore : MonoBehaviour
         Charger_Surprised,
         Charger_Charge,
 
+        // Shade
+        Shade_Idle,
+        Shade_Chase,
+        Shade_Stunned,
+        Shade_Death,
+
         // Add more enemy states as needed
     }
 
@@ -132,13 +138,16 @@ public class EnemyCore : MonoBehaviour
     protected void OnCollisionStay2D(Collision2D other)
     {
         if (
-            other.gameObject.GetComponent<PlayerController>()
+            other.gameObject.CompareTag("Player")
             && !PlayerController.Instance.GetComponent<PlayerStateList>().IsInvincible
             && health > 0
         )
         {
             Attack();
-            PlayerController.Instance.HitStopTime(0, 5, 0.5f); // time scale = 0, restore speed = 5, delay = 0.5
+            if (PlayerController.Instance.GetComponent<PlayerStateList>().IsAlive)
+            {
+                PlayerController.Instance.HitStopTime(0, 5, 0.5f); // time scale = 0, restore speed = 5, delay = 0.5
+            }
         }
     }
 
