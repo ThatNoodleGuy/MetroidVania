@@ -4,10 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-public class UIManager : MonoBehaviour
+public class UIManager : Singleton<UIManager>
 {
-    public static UIManager Instance;
-
     public SceneFader sceneFader;
 
     [SerializeField]
@@ -31,18 +29,9 @@ public class UIManager : MonoBehaviour
     [SerializeField]
     private ManaState manaState;
 
-    private void Awake()
+    protected override void Awake()
     {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
-        else if (Instance != this && Instance != null)
-        {
-            Destroy(gameObject);
-            return;
-        }
+        base.Awake();
 
         sceneFader = GetComponentInChildren<SceneFader>();
     }

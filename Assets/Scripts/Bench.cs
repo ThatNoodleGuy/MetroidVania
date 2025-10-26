@@ -3,38 +3,55 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class Bench : MonoBehaviour
 {
     [SerializeField]
     private bool interacted;
 
+    [SerializeField]
+    private bool isInRange;
+
     private PlayerController player;
-    private bool playerInRange = false;
+
+    private void Update()
+    {
+        if (isInRange && PlayerController.Instance.InteractValue)
+        {
+            // Debug.Log("interacted with bench");
+            // Debug.Log(PlayerController.Instance.InteractValue);
+
+            if (!interacted) // Only trigger once per press
+            {
+                interacted = true;
+
+                SaveData.Instance.benchSceneName = SceneManager.GetActiveScene().name;
+                SaveData.Instance.benchPos = new Vector2(
+                    gameObject.transform.position.x,
+                    gameObject.transform.position.y
+                );
+                SaveData.Instance.SaveBench();
+                SaveData.Instance.SavePlayerData();
+                Debug.Log("benched");
+            }
+        }
+    }
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        player = other.GetComponent<PlayerController>();
-        if (player != null)
+        if (other.gameObject.CompareTag("Player"))
         {
-            playerInRange = true;
+            isInRange = true;
         }
     }
 
     private void OnTriggerExit2D(Collider2D other)
     {
-        if (other.CompareTag("Player"))
+        if (other.gameObject.CompareTag("Player"))
         {
-            playerInRange = false;
-            player = null;
-        }
-    }
-
-    private void Update()
-    {
-        if (playerInRange && player != null && PlayerController.Instance.InteractValue)
-        {
-            interacted = true;
+            isInRange = false;
+            interacted = false;
         }
     }
 
@@ -42,5 +59,11 @@ public class Bench : MonoBehaviour
     {
         get { return interacted; }
         set { interacted = value; }
+    }
+
+    public bool IsInRange
+    {
+        get { return isInRange; }
+        set { isInRange = value; }
     }
 }

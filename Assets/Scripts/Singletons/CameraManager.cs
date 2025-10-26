@@ -5,7 +5,7 @@ using System.Linq;
 using Cinemachine;
 using UnityEngine;
 
-public class CameraManager : MonoBehaviour
+public class CameraManager : Singleton<CameraManager>
 {
     [SerializeField]
     CinemachineVirtualCamera[] allVirtualCameras;
@@ -31,14 +31,9 @@ public class CameraManager : MonoBehaviour
 
     private float normalYDamp;
 
-    public static CameraManager Instance { get; private set; }
-
-    private void Awake()
+    protected override void Awake()
     {
-        if (Instance == null)
-        {
-            Instance = this;
-        }
+        base.Awake();
 
         for (int i = 0; i < allVirtualCameras.Length; i++)
         {

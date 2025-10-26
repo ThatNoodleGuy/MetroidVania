@@ -6,10 +6,8 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
-public class PlayerController : MonoBehaviour
+public class PlayerController : Singleton<PlayerController>
 {
-    public static PlayerController Instance;
-
     // State names (must match your Animator state names)
     private const string STATE_IDLE = "Player_Idle";
     private const string STATE_WALK = "Player_Walk";
@@ -63,6 +61,9 @@ public class PlayerController : MonoBehaviour
 
     [SerializeField]
     private int maxAirJumps;
+
+    [SerializeField]
+    private int maxFallingSpeed;
 
     [Space(5)]
     [Header("Ground Check Settings")]
@@ -266,18 +267,9 @@ public class PlayerController : MonoBehaviour
     [HideInInspector]
     public bool SaveValue;
 
-    private void Awake()
+    protected override void Awake()
     {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
-        else if (Instance != this && Instance != null)
-        {
-            Destroy(gameObject);
-            return;
-        }
+        base.Awake();
 
         _playerControls = new PlayerControls();
         _playerControls.Player.Enable();
@@ -290,13 +282,28 @@ public class PlayerController : MonoBehaviour
         _playerStateList = GetComponent<PlayerStateList>();
         _spriteRenderer = GetComponent<SpriteRenderer>();
 
-        _playerStateList.IsAlive = true;
-
         Health = maxHealth;
         _gravity = _rigidbody2D.gravityScale;
 
         Mana = mana;
         manaStorage.fillAmount = Mana;
+
+        SaveData.Instance.LoadPlayerData();
+
+        if (halfMana)
+        {
+            UIManager.Instance.SwitchManaState(UIManager.ManaState.HalfMana);
+        }
+        else
+        {
+            UIManager.Instance.SwitchManaState(UIManager.ManaState.FullMana);
+        }
+
+        if (Health == 0)
+        {
+            _playerStateList.IsAlive = false;
+            GameManager.Instance.RespawnPlayer();
+        }
     }
 
     private void OnEnable()
@@ -451,6 +458,10 @@ public class PlayerController : MonoBehaviour
     {
         if (!_playerStateList.IsAlive)
         {
+            _rigidbody2D.constraints = RigidbodyConstraints2D.None;
+            _rigidbody2D.constraints = RigidbodyConstraints2D.FreezeRotation;
+            GetComponent<Collider2D>().enabled = true;
+
             _playerStateList.IsAlive = true;
             halfMana = true;
             UIManager.Instance.SwitchManaState(UIManager.ManaState.HalfMana);
@@ -557,6 +568,15 @@ public class PlayerController : MonoBehaviour
             _playerStateList.IsJumping = false;
             _rigidbody2D.linearVelocity = new Vector2(_rigidbody2D.linearVelocity.x, 0);
         }
+
+        _rigidbody2D.linearVelocity = new Vector2(
+            _rigidbody2D.linearVelocity.x,
+            Mathf.Clamp(
+                _rigidbody2D.linearVelocity.y,
+                -maxFallingSpeed,
+                _rigidbody2D.linearVelocity.y
+            )
+        );
     }
 
     private void UpdateJumpVariables()
@@ -1067,6 +1087,10 @@ public class PlayerController : MonoBehaviour
             Quaternion.identity
         );
         Destroy(deathEffect, 1.5f);
+
+        _rigidbody2D.constraints = RigidbodyConstraints2D.FreezePosition;
+        GetComponent<Collider2D>().enabled = false;
+
         yield return new WaitForSeconds(0.9f);
         StartCoroutine(UIManager.Instance.ActivateDeathScreenRoutine());
 

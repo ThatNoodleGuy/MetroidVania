@@ -5,10 +5,8 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public class GameManager : MonoBehaviour
+public class GameManager : Singleton<GameManager>
 {
-    public static GameManager Instance { get; private set; }
-
     [SerializeField]
     private string transitionedFromScene;
 
@@ -30,19 +28,11 @@ public class GameManager : MonoBehaviour
     [SerializeField]
     private PlayerControls playerControls;
 
-    private void Awake()
+    protected override void Awake()
     {
         SaveData.Instance.Initialize();
 
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
+        base.Awake();
 
         if (PlayerController.Instance != null)
         {
@@ -50,7 +40,7 @@ public class GameManager : MonoBehaviour
             if (platfromingRespawnPoint == Vector2.zero)
             {
                 platfromingRespawnPoint = PlayerController.Instance.transform.position;
-                Debug.Log("Initialized platforming respawn point to: " + platfromingRespawnPoint);
+                // Debug.Log("Initialized platforming respawn point to: " + platfromingRespawnPoint);
             }
 
             if (PlayerController.Instance.HalfMana)
