@@ -45,3 +45,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   transitionedFromScene: 
+  platfromingRespawnPoint: {x: 0, y: 0}
+  respawnPoint: {x: 0, y: 0}
+  defaultRespawnPoint: {x: -61.4, y: 4.1}
+  bench: {fileID: 0}
+  playerShade: {fileID: 6662875184358918818, guid: 3f9c9952f1f1c2544b785cf431811383, type: 3}

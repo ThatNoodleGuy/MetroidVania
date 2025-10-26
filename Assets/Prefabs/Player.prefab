@@ -67,6 +67,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 3706769384741162193}
+  - {fileID: 7965174378359857160}
   - {fileID: 5748947460853546157}
   - {fileID: 6188517303480820726}
   - {fileID: 5202261284876838256}
@@ -236,7 +237,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9c128bfa3d921194d82cc88cc02dee17, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _playerStateList: {fileID: 5886219769296915550}
+  playerState: {fileID: 5886219769296915550}
   _rigidbody2D: {fileID: 762412133957944482}
   _animator: {fileID: 9163002271728872418}
   walkSpeed: 13
@@ -245,9 +246,16 @@ MonoBehaviour:
   coyoteTime: 0.1
   maxAirJumps: 1
   maxFallingSpeed: 1
+  wallSlidingSpeed: 2
+  wallCheck: {fileID: 7965174378359857160}
+  whatIsWall:
+    serializedVersion: 2
+    m_Bits: 64
+  wallJumpingDuration: 0.1
+  wallJumpingPower: {x: 15, y: 45}
   groundCheckPoint: {fileID: 3706769384741162193}
   groundCheckY: 0.2
-  groundCheckX: 0.5
+  groundCheckX: 0.1
   whatIsGround:
     serializedVersion: 2
     m_Bits: 64
@@ -328,6 +336,37 @@ MonoBehaviour:
   IsCasting: 0
   IsInCutscene: 0
   IsAlive: 1
+--- !u!1 &1205431662782014032
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7965174378359857160}
+  m_Layer: 0
+  m_Name: WallCheckPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7965174378359857160
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1205431662782014032}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0.764, y: -0.799, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 6394883399303113211}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1457421179948439860
 GameObject:
   m_ObjectHideFlags: 0

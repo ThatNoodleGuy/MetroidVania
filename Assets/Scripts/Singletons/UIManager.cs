@@ -33,7 +33,18 @@ public class UIManager : Singleton<UIManager>
     {
         base.Awake();
 
+        if (Instance != this)
+            return;
+
         sceneFader = GetComponentInChildren<SceneFader>();
+    }
+
+    protected override void OnDisable()
+    {
+        // Prevent duplicate instances from running cleanup code
+        // Duplicates are destroyed before initialization completes
+        if (Instance != this)
+            return;
     }
 
     public IEnumerator ActivateDeathScreenRoutine()

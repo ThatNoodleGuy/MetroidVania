@@ -12980,6 +12980,18 @@ PrefabInstance:
       propertyPath: manaStorage
       value: 
       objectReference: {fileID: 1745581917}
+    - target: {fileID: 1534143763379301952, guid: 390d5318501becc4f92fd5b19c55147f, type: 3}
+      propertyPath: manaSpellCost
+      value: 0.15
+      objectReference: {fileID: 0}
+    - target: {fileID: 1534143763379301952, guid: 390d5318501becc4f92fd5b19c55147f, type: 3}
+      propertyPath: whatIsWall.m_Bits
+      value: 64
+      objectReference: {fileID: 0}
+    - target: {fileID: 5886219769296915550, guid: 390d5318501becc4f92fd5b19c55147f, type: 3}
+      propertyPath: IsLookingRight
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 6394883399303113211, guid: 390d5318501becc4f92fd5b19c55147f, type: 3}
       propertyPath: m_LocalPosition.x
       value: -26.92
@@ -13038,18 +13050,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 682109653646706324, guid: bb4918ca0f050624ab634fbce071954f, type: 3}
-      propertyPath: playerShade
-      value: 
-      objectReference: {fileID: 6662875184358918818, guid: 3f9c9952f1f1c2544b785cf431811383, type: 3}
-    - target: {fileID: 682109653646706324, guid: bb4918ca0f050624ab634fbce071954f, type: 3}
-      propertyPath: defaultRespawnPoint.x
-      value: -61.4
-      objectReference: {fileID: 0}
-    - target: {fileID: 682109653646706324, guid: bb4918ca0f050624ab634fbce071954f, type: 3}
-      propertyPath: defaultRespawnPoint.y
-      value: 4.1
-      objectReference: {fileID: 0}
     - target: {fileID: 1451517707237177180, guid: bb4918ca0f050624ab634fbce071954f, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0

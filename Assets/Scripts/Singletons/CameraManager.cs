@@ -35,22 +35,54 @@ public class CameraManager : Singleton<CameraManager>
     {
         base.Awake();
 
+        // If this is a duplicate instance being destroyed, don't initialize
+        if (Instance != this)
+            return;
+
+        // Safety check for camera array
+        if (allVirtualCameras == null || allVirtualCameras.Length == 0)
+        {
+            Debug.LogWarning("CameraManager: No virtual cameras assigned!");
+            return;
+        }
+
         for (int i = 0; i < allVirtualCameras.Length; i++)
         {
-            if (allVirtualCameras[i].enabled)
+            if (allVirtualCameras[i] != null && allVirtualCameras[i].enabled)
             {
                 currentCamera = allVirtualCameras[i];
 
                 framingTransposer =
                     currentCamera.GetCinemachineComponent<CinemachineFramingTransposer>();
+                break; // Found the current camera, no need to continue
             }
         }
 
-        normalYDamp = framingTransposer.m_YDamping;
+        // Safety check for framingTransposer
+        if (framingTransposer != null)
+        {
+            normalYDamp = framingTransposer.m_YDamping;
+        }
+    }
+
+    protected override void OnDisable()
+    {
+        // Prevent duplicate instances from running cleanup code
+        // Duplicates are destroyed before initialization completes
+        if (Instance != this)
+            return;
     }
 
     private void Start()
     {
+        if (PlayerController.Instance == null)
+        {
+            Debug.LogWarning(
+                "CameraManager: PlayerController.Instance is null in Start(). Cameras will not follow player."
+            );
+            return;
+        }
+
         for (int i = 0; i < allVirtualCameras.Length; i++)
         {
             allVirtualCameras[i].Follow = PlayerController.Instance.transform;
