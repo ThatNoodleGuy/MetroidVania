@@ -23,6 +23,8 @@ public struct SaveData
     public Vector2 playerPosition;
     public string lastScene;
 
+    public bool playerUnlocksWallJump;
+
     //enemies stuff
     //shade
     public Vector2 shadePos;
@@ -109,6 +111,9 @@ public struct SaveData
             playerHalfMana = PlayerController.Instance.HalfMana;
             writer.Write(playerHalfMana);
 
+            playerUnlocksWallJump = PlayerController.Instance.UnlockedWallJump;
+            writer.Write(playerUnlocksWallJump);
+
             playerPosition = PlayerController.Instance.transform.position;
             writer.Write(playerPosition.x);
             writer.Write(playerPosition.y);
@@ -136,11 +141,14 @@ public struct SaveData
                 playerPosition.y = reader.ReadSingle();
                 lastScene = reader.ReadString();
 
+                playerUnlocksWallJump = reader.ReadBoolean();
+
                 SceneManager.LoadScene(lastScene);
                 PlayerController.Instance.transform.position = playerPosition;
                 PlayerController.Instance.HalfMana = playerHalfMana;
                 PlayerController.Instance.Health = playerHealth;
                 PlayerController.Instance.Mana = playerMana;
+                PlayerController.Instance.UnlockedWallJump = playerUnlocksWallJump;
             }
             Debug.Log("load player data");
             Debug.Log(playerHalfMana);
@@ -151,6 +159,8 @@ public struct SaveData
             PlayerController.Instance.HalfMana = false;
             PlayerController.Instance.Health = PlayerController.Instance.MaxHealth;
             PlayerController.Instance.Mana = 0.5f;
+
+            PlayerController.Instance.UnlockedWallJump = false;
         }
     }
 

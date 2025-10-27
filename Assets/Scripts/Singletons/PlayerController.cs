@@ -1,3 +1,5 @@
+// My version
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -81,7 +83,6 @@ public class PlayerController : Singleton<PlayerController>
 
     [SerializeField]
     private Vector2 wallJumpingPower;
-
     private float wallJumpingDirection;
     private bool isWallSliding;
     private bool isWallJumping;
@@ -111,12 +112,11 @@ public class PlayerController : Singleton<PlayerController>
     [SerializeField]
     private float dashCooldown;
 
-    // [SerializeField]private Transform dashEffectOriginPoint;
     [SerializeField]
     private GameObject dashEffectVFXPrefab;
 
     [SerializeField]
-    private Transform dashEffectOrigin; // empty child under VisualRoot at the feet
+    private Transform dashEffectOrigin;
     private bool canDash = true;
     private bool dashed;
 
@@ -200,7 +200,6 @@ public class PlayerController : Singleton<PlayerController>
 
     [SerializeField]
     private float timeToHeal;
-
     private HealingPhase currentHealingPhase = HealingPhase.None;
 
     private enum HealingPhase
@@ -263,7 +262,8 @@ public class PlayerController : Singleton<PlayerController>
     [SerializeField]
     private float playerFallSpeedThreshold = -10;
 
-    //Buttons
+    [Space(5)]
+    //Button Input values
     [HideInInspector]
     public Vector2 MoveValue;
 
@@ -287,6 +287,11 @@ public class PlayerController : Singleton<PlayerController>
 
     [HideInInspector]
     public bool SaveValue;
+
+    [Space(5)]
+    [Header("Skill Unlocks:")]
+    [SerializeField]
+    private bool unlockedWallJump;
 
     protected override void Awake()
     {
@@ -375,14 +380,22 @@ public class PlayerController : Singleton<PlayerController>
             }
         }
 
+        if (!isWallJumping)
+        {
+            HandleMovement();
+            HandlePlayerSpriteFlip();
+            HandleJumping();
+        }
+
+        if (unlockedWallJump)
+        {
+            WallSlide();
+            WallJump();
+        }
+
         FlashWhileInvincible();
-        HandleMovement();
         HandleHealing();
         HandleCastingSpell();
-        HandlePlayerSpriteFlip();
-        HandleJumping();
-        WallSlide();
-        WallJump();
         HandleDashing();
         HandleAttacking();
 
@@ -1323,5 +1336,11 @@ public class PlayerController : Singleton<PlayerController>
     public PlayerControls GetPlayerControls()
     {
         return _playerControls;
+    }
+
+    public bool UnlockedWallJump
+    {
+        get => unlockedWallJump;
+        set => unlockedWallJump = value;
     }
 }
