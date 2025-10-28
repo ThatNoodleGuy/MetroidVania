@@ -251,7 +251,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f186fc3c0a2c03d40b3b1ea18267e8d5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  unlockEffectVFX: {fileID: 0}
+  unlockEffectVFX: {fileID: 7420627951222045128, guid: 198aa252ce4e9e544875ea53593b3f20, type: 3}
+  canvasUI: {fileID: 5863597141933252144}
 --- !u!1 &2127747913073434101
 GameObject:
   m_ObjectHideFlags: 0

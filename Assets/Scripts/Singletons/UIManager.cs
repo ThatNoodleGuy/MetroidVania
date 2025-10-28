@@ -20,6 +20,9 @@ public class UIManager : Singleton<UIManager>
     [SerializeField]
     private GameObject mapHandler;
 
+    [SerializeField]
+    private GameObject inventory;
+
     public enum ManaState
     {
         FullMana,
@@ -85,5 +88,11 @@ public class UIManager : Singleton<UIManager>
     {
         get { return mapHandler; }
         set { mapHandler = value; }
+    }
+
+    public GameObject Inventory
+    {
+        get { return inventory; }
+        set { inventory = value; }
     }
 }

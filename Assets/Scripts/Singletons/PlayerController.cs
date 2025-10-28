@@ -184,6 +184,12 @@ public class PlayerController : Singleton<PlayerController>
     private int maxHealth;
 
     [SerializeField]
+    private int maxTotalHealth;
+
+    [SerializeField]
+    private int heartShards;
+
+    [SerializeField]
     private float invincibilityDuration = 1f;
 
     [SerializeField]
@@ -228,6 +234,15 @@ public class PlayerController : Singleton<PlayerController>
     private float healBlendSpeed = 2f; // Speed to reach loop animation
     private float healBlendValue = 0f; // Current position in blend tree
     private bool halfMana;
+
+    [SerializeField]
+    private ManaOrbsHandler manaOrbsHandler;
+
+    [SerializeField]
+    private int orbShard;
+
+    [SerializeField]
+    private int manaOrbs;
 
     [Space(5)]
     [Header("Spell Casting Settings:")]
@@ -288,10 +303,28 @@ public class PlayerController : Singleton<PlayerController>
     [HideInInspector]
     public bool SaveValue;
 
+    [HideInInspector]
+    public bool OpenInventoryValue;
+
     [Space(5)]
     [Header("Skill Unlocks:")]
     [SerializeField]
     private bool unlockedWallJump;
+
+    [SerializeField]
+    private bool unlockedDash;
+
+    [SerializeField]
+    private bool unlockedVarJump;
+
+    [SerializeField]
+    private bool unlockedSideCast;
+
+    [SerializeField]
+    private bool unlockedUpCast;
+
+    [SerializeField]
+    private bool unlockedDownCast;
 
     protected override void Awake()
     {
@@ -364,6 +397,7 @@ public class PlayerController : Singleton<PlayerController>
         RestoreTimeScale();
         UpdateCameraYDampForPlayerFall();
         ToggleMap();
+        ToggleInventory();
 
         if (playerState.IsDashing)
             return; // Block other actions, animation handled at end
@@ -392,14 +426,22 @@ public class PlayerController : Singleton<PlayerController>
             WallSlide();
             WallJump();
         }
+        if (unlockedDash)
+        {
+            HandleDashing();
+        }
 
+        HandleAttacking();
+        HandleCastingSpell();
         FlashWhileInvincible();
         HandleHealing();
-        HandleCastingSpell();
-        HandleDashing();
-        HandleAttacking();
 
         UpdateAnimationState(); // Single call - handles everything
+
+        if (manaOrbs > 3)
+        {
+            manaOrbs = 3;
+        }
     }
 
     private void FixedUpdate()
@@ -438,6 +480,7 @@ public class PlayerController : Singleton<PlayerController>
         MapValue = _playerControls.Player.Map.IsPressed();
         SaveValue = _playerControls.Player.Save.WasPressedThisFrame();
         openMap = MapValue;
+        OpenInventoryValue = _playerControls.Player.Inventory.WasPressedThisFrame();
 
         xAxis = MoveValue.x;
         yAxis = MoveValue.y;
@@ -461,6 +504,18 @@ public class PlayerController : Singleton<PlayerController>
         else
         {
             UIManager.Instance.MapHandler.SetActive(false);
+        }
+    }
+
+    private void ToggleInventory()
+    {
+        if (OpenInventoryValue)
+        {
+            UIManager.Instance.Inventory.SetActive(true);
+        }
+        else
+        {
+            UIManager.Instance.Inventory.SetActive(false);
         }
     }
 
@@ -565,7 +620,7 @@ public class PlayerController : Singleton<PlayerController>
             playerState.IsJumping = true;
         }
 
-        if (!Grounded() && airJumpCounter < maxAirJumps && JumpValue)
+        if (!Grounded() && airJumpCounter < maxAirJumps && JumpValue && unlockedVarJump)
         {
             playerState.IsJumping = true;
             airJumpCounter++;
@@ -1073,7 +1128,16 @@ public class PlayerController : Singleton<PlayerController>
                     }
 
                     // Drain Mana
+                    manaOrbsHandler.usedMana = true;
+                    manaOrbsHandler.countDown = 3f;
                     Mana -= Time.deltaTime * manaDrainSpeed;
+
+                    // Check if healing should stop
+                    if (!playerState.IsHealing || Health >= maxHealth || Mana <= 0)
+                    {
+                        // Begin ending animation
+                        currentHealingPhase = HealingPhase.Ending;
+                    }
                 }
                 else
                 {
@@ -1235,7 +1299,7 @@ public class PlayerController : Singleton<PlayerController>
     {
         // This will be called by the Animation Event
         //Side cast
-        if (yAxis == 0 || (yAxis < 0 && Grounded()))
+        if ((yAxis == 0 || (yAxis < 0 && Grounded())) && unlockedSideCast)
         {
             GameObject spell = Instantiate(
                 sideSpellFireball,
@@ -1254,13 +1318,13 @@ public class PlayerController : Singleton<PlayerController>
             playerState.IsRecoilingXAxis = true;
         }
         //Up cast
-        else if (yAxis > 0)
+        else if (yAxis > 0 && unlockedUpCast)
         {
             GameObject spell = Instantiate(upSpellExplosion, transform);
             _rigidbody2D.linearVelocity = Vector2.zero;
         }
         //Down cast
-        else if (yAxis < 0)
+        else if (yAxis < 0 && unlockedDownCast)
         {
             downSpellFireball.SetActive(true);
         }
@@ -1342,5 +1406,65 @@ public class PlayerController : Singleton<PlayerController>
     {
         get => unlockedWallJump;
         set => unlockedWallJump = value;
+    }
+
+    public bool UnlockedDash
+    {
+        get => unlockedDash;
+        set => unlockedDash = value;
+    }
+
+    public bool UnlockedVarJump
+    {
+        get => unlockedVarJump;
+        set => unlockedVarJump = value;
+    }
+
+    public bool UnlockedDownCast
+    {
+        get => unlockedDownCast;
+        set => unlockedDownCast = value;
+    }
+
+    public bool UnlockedSideCast
+    {
+        get => unlockedSideCast;
+        set => unlockedSideCast = value;
+    }
+
+    public bool UnlockedUpCast
+    {
+        get => unlockedUpCast;
+        set => unlockedUpCast = value;
+    }
+
+    public int MaxTotalHealth
+    {
+        get => maxTotalHealth;
+        set => maxTotalHealth = value;
+    }
+
+    public int HeartShards
+    {
+        get => heartShards;
+        set => heartShards = value;
+    }
+
+    public int OrbShard
+    {
+        get => orbShard;
+        set => orbShard = value;
+    }
+
+    public int ManaOrbs
+    {
+        get => manaOrbs;
+        set => manaOrbs = value;
+    }
+
+    public ManaOrbsHandler ManaOrbsHandler
+    {
+        get => manaOrbsHandler;
+        set => manaOrbsHandler = value;
     }
 }

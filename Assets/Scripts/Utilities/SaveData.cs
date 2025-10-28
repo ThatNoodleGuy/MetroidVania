@@ -18,12 +18,23 @@ public struct SaveData
 
     //player stuff
     public int playerHealth;
+    public int playerHeartShards;
     public float playerMana;
+    public int playerManaOrbs;
+    public int playerOrbShard;
+    public float playerOrb0fill,
+        playerOrb1fill,
+        playerOrb2fill;
     public bool playerHalfMana;
     public Vector2 playerPosition;
     public string lastScene;
 
-    public bool playerUnlocksWallJump;
+    public bool playerUnlockedWallJump,
+        playerUnlockedDash,
+        playerUnlockedVarJump;
+    public bool playerUnlockedSideCast,
+        playerUnlockedUpCast,
+        playerUnlockedDownCast;
 
     //enemies stuff
     //shade
@@ -75,7 +86,8 @@ public struct SaveData
 
     public void LoadBench()
     {
-        if (File.Exists(Application.persistentDataPath + "/save.bench.data"))
+        string savePath = Application.persistentDataPath + "/save.bench.data";
+        if (File.Exists(savePath) && new FileInfo(savePath).Length > 0)
         {
             using (
                 BinaryReader reader = new BinaryReader(
@@ -106,13 +118,37 @@ public struct SaveData
         {
             playerHealth = PlayerController.Instance.Health;
             writer.Write(playerHealth);
+            playerHeartShards = PlayerController.Instance.HeartShards;
+            writer.Write(playerHeartShards);
+
             playerMana = PlayerController.Instance.Mana;
             writer.Write(playerMana);
             playerHalfMana = PlayerController.Instance.HalfMana;
             writer.Write(playerHalfMana);
+            playerManaOrbs = PlayerController.Instance.ManaOrbs;
+            writer.Write(playerManaOrbs);
+            playerOrbShard = PlayerController.Instance.OrbShard;
+            writer.Write(playerOrbShard);
+            playerOrb0fill = PlayerController.Instance.ManaOrbsHandler.orbFills[0].fillAmount;
+            writer.Write(playerOrb0fill);
+            playerOrb1fill = PlayerController.Instance.ManaOrbsHandler.orbFills[1].fillAmount;
+            writer.Write(playerOrb1fill);
+            playerOrb2fill = PlayerController.Instance.ManaOrbsHandler.orbFills[2].fillAmount;
+            writer.Write(playerOrb2fill);
 
-            playerUnlocksWallJump = PlayerController.Instance.UnlockedWallJump;
-            writer.Write(playerUnlocksWallJump);
+            playerUnlockedWallJump = PlayerController.Instance.UnlockedWallJump;
+            writer.Write(playerUnlockedWallJump);
+            playerUnlockedDash = PlayerController.Instance.UnlockedDash;
+            writer.Write(playerUnlockedDash);
+            playerUnlockedVarJump = PlayerController.Instance.UnlockedVarJump;
+            writer.Write(playerUnlockedVarJump);
+
+            playerUnlockedSideCast = PlayerController.Instance.UnlockedSideCast;
+            writer.Write(playerUnlockedSideCast);
+            playerUnlockedUpCast = PlayerController.Instance.UnlockedUpCast;
+            writer.Write(playerUnlockedUpCast);
+            playerUnlockedDownCast = PlayerController.Instance.UnlockedDownCast;
+            writer.Write(playerUnlockedDownCast);
 
             playerPosition = PlayerController.Instance.transform.position;
             writer.Write(playerPosition.x);
@@ -126,7 +162,8 @@ public struct SaveData
 
     public void LoadPlayerData()
     {
-        if (File.Exists(Application.persistentDataPath + "/save.player.data"))
+        string savePath = Application.persistentDataPath + "/save.player.data";
+        if (File.Exists(savePath) && new FileInfo(savePath).Length > 0)
         {
             using (
                 BinaryReader reader = new BinaryReader(
@@ -135,20 +172,47 @@ public struct SaveData
             )
             {
                 playerHealth = reader.ReadInt32();
+                playerHeartShards = reader.ReadInt32();
                 playerMana = reader.ReadSingle();
                 playerHalfMana = reader.ReadBoolean();
+                playerManaOrbs = reader.ReadInt32();
+                playerOrbShard = reader.ReadInt32();
+                playerOrb0fill = reader.ReadSingle();
+                playerOrb1fill = reader.ReadSingle();
+                playerOrb2fill = reader.ReadSingle();
+
+                playerUnlockedWallJump = reader.ReadBoolean();
+                playerUnlockedDash = reader.ReadBoolean();
+                playerUnlockedVarJump = reader.ReadBoolean();
+
+                playerUnlockedSideCast = reader.ReadBoolean();
+                playerUnlockedUpCast = reader.ReadBoolean();
+                playerUnlockedDownCast = reader.ReadBoolean();
+
                 playerPosition.x = reader.ReadSingle();
                 playerPosition.y = reader.ReadSingle();
-                lastScene = reader.ReadString();
 
-                playerUnlocksWallJump = reader.ReadBoolean();
+                lastScene = reader.ReadString();
 
                 SceneManager.LoadScene(lastScene);
                 PlayerController.Instance.transform.position = playerPosition;
                 PlayerController.Instance.HalfMana = playerHalfMana;
                 PlayerController.Instance.Health = playerHealth;
+                PlayerController.Instance.HeartShards = playerHeartShards;
                 PlayerController.Instance.Mana = playerMana;
-                PlayerController.Instance.UnlockedWallJump = playerUnlocksWallJump;
+                PlayerController.Instance.ManaOrbs = playerManaOrbs;
+                PlayerController.Instance.OrbShard = playerOrbShard;
+                PlayerController.Instance.ManaOrbsHandler.orbFills[0].fillAmount = playerOrb0fill;
+                PlayerController.Instance.ManaOrbsHandler.orbFills[1].fillAmount = playerOrb1fill;
+                PlayerController.Instance.ManaOrbsHandler.orbFills[2].fillAmount = playerOrb2fill;
+
+                PlayerController.Instance.UnlockedWallJump = playerUnlockedWallJump;
+                PlayerController.Instance.UnlockedDash = playerUnlockedDash;
+                PlayerController.Instance.UnlockedVarJump = playerUnlockedVarJump;
+
+                PlayerController.Instance.UnlockedSideCast = playerUnlockedSideCast;
+                PlayerController.Instance.UnlockedUpCast = playerUnlockedUpCast;
+                PlayerController.Instance.UnlockedDownCast = playerUnlockedDownCast;
             }
             Debug.Log("load player data");
             Debug.Log(playerHalfMana);
@@ -159,8 +223,11 @@ public struct SaveData
             PlayerController.Instance.HalfMana = false;
             PlayerController.Instance.Health = PlayerController.Instance.MaxHealth;
             PlayerController.Instance.Mana = 0.5f;
+            PlayerController.Instance.HeartShards = 0;
 
             PlayerController.Instance.UnlockedWallJump = false;
+            PlayerController.Instance.UnlockedDash = false;
+            PlayerController.Instance.UnlockedVarJump = false;
         }
     }
 
@@ -193,7 +260,8 @@ public struct SaveData
 
     public void LoadShadeData()
     {
-        if (File.Exists(Application.persistentDataPath + "/save.shade.data"))
+        string savePath = Application.persistentDataPath + "/save.shade.data";
+        if (File.Exists(savePath) && new FileInfo(savePath).Length > 0)
         {
             using (
                 BinaryReader reader = new BinaryReader(
